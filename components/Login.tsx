@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { LogIn, UserPlus, ShieldCheck, TrendingUp, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { AppUser } from '../types';
-import { supabase, dbService } from '../services/dbService';
+import { dbService } from '../services/dbService';
 
 interface LoginProps {
   onLogin: (user: AppUser) => void;
@@ -22,59 +22,38 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    try {
-      if (isRegister) {
-        if (!academyName.trim()) throw new Error("El nombre de la academia es obligatorio");
-        
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              nombre_academia: academyName,
-            }
-          }
-        });
-
-        if (signUpError) throw signUpError;
-        
-        if (data.user) {
+    // Artificial delay to simulate a real login without network blocking
+    setTimeout(async () => {
+      try {
+        if (isRegister) {
+          if (!academyName.trim()) throw new Error("El nombre de la academia es obligatorio");
+          
           const newUser: AppUser = {
-            id: data.user.id,
+            id: crypto.randomUUID(),
             nombre_academia: academyName,
             email: email,
             created_at: new Date().toISOString()
           };
-          // Inicializar datos por defecto para el nuevo usuario
+          
+          // Initialize local data for the new user
           await dbService.initializeMockData(newUser.id);
           onLogin(newUser);
         } else {
-          setError("Revisa tu correo para confirmar tu cuenta antes de entrar.");
-        }
-      } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (signInError) throw signInError;
-        
-        if (data.user) {
+          // Mock login: any credentials work for now in local mode
           const user: AppUser = {
-            id: data.user.id,
-            nombre_academia: data.user.user_metadata?.nombre_academia || 'Mi Academia',
-            email: data.user.email || email,
-            created_at: data.user.created_at || new Date().toISOString()
+            id: 'local-session-id',
+            nombre_academia: 'Mi Academia Local',
+            email: email,
+            created_at: new Date().toISOString()
           };
           onLogin(user);
         }
+      } catch (err: any) {
+        setError(err.message || 'Error al procesar la solicitud.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      console.error("Auth Error:", err);
-      setError(err.message || 'Error al procesar la solicitud.');
-    } finally {
-      setLoading(false);
-    }
+    }, 500);
   };
 
   return (
@@ -88,7 +67,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <TrendingUp size={40} className="text-white" />
           </div>
           <h1 className="text-4xl font-black text-white tracking-tight">Trading Academy</h1>
-          <p className="text-slate-400 mt-2 font-medium">Internal Performance Hub</p>
+          <p className="text-slate-400 mt-2 font-medium">Internal Performance Hub (Modo Local)</p>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl">
@@ -177,7 +156,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         <p className="text-center text-slate-500 text-[10px] mt-8 uppercase tracking-[0.2em]">
-          <ShieldCheck size={12} className="inline mr-1 mb-0.5" /> Sincronización Blindada Supabase Auth
+          <ShieldCheck size={12} className="inline mr-1 mb-0.5" /> Almacenamiento Local Seguro
         </p>
       </div>
     </div>
