@@ -26,18 +26,24 @@ const App: React.FC = () => {
     setUser(appUser);
     localStorage.setItem('academy_auth_user', JSON.stringify(appUser));
     
-    // Background synchronization
+    // Background synchronization - does not block the UI
     if (dbService.isCloudEnabled()) {
       dbService.syncFromCloud().catch((error) => {
-        console.warn("Background sync failed, using local cache.", error);
+        console.warn("Background sync failed quietly:", error);
       });
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
-      // Start loading only for initial check
+      // Small verification period
       setIsLoading(true);
+      
+      // Safety timeout to prevent infinite loading if the network is slow
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000);
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -46,17 +52,16 @@ const App: React.FC = () => {
           setUser(null);
         }
       } catch (error) {
-        console.error("Auth initialization error:", error);
+        console.error("Auth init error:", error);
         setUser(null);
       } finally {
-        // Requirement 5: Always set isLoading to false
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     };
 
     initAuth();
 
-    // Monitor auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         startSession(session.user);
@@ -91,17 +96,17 @@ const App: React.FC = () => {
     setCurrentView('operaciones');
   };
 
-  // Requirement 4: Loading screen only during active verification
+  // Only show the loader if we are explicitly checking and have no user context yet
   if (isLoading && !user) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Verificando Credenciales...</p>
+        <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Sincronizando...</p>
       </div>
     );
   }
 
-  // Requirement 1: If no session, show Login
+  // Requirement 1 & 2: Show Login immediately if user is null
   if (!user) {
     return (
       <>
@@ -135,7 +140,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Requirement 2: If session active, show main Layout (Dashboard by default)
   return (
     <Layout 
       currentView={currentView} 
