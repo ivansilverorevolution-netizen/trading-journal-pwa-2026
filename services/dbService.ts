@@ -105,7 +105,7 @@ export const dbService = {
   getTraders: (): Trader[] => [],
 
   saveTrader: async (trader: Partial<Trader>) => {
-    const { data: { user } } = await supabase.auth.getUser();
+const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado");
 
     const traderData = {
