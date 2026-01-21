@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -10,13 +9,11 @@ import InstallBanner from './components/InstallBanner';
 import { dbService } from './services/dbService';
 import { AppUser, Trade } from './types';
 
-// Componente raíz que orquestra la navegación y el estado de la sesión
 export default function App() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
 
-  // Carga inicial de sesión y preparación de base de datos local
   useEffect(() => {
     dbService.initializeDefaultData();
     const currentUser = dbService.getCurrentUser();
@@ -35,23 +32,23 @@ export default function App() {
     dbService.setCurrentUser(null);
   };
 
-  // Redirigir a login si no hay sesión activa
+  const handleNavigate = (view: string) => {
+    setCurrentView(view);
+    setEditTrade(undefined);
+  };
+
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
 
-  // Renderizado dinámico basado en la navegación lateral
   return (
     <Layout 
       currentView={currentView} 
-      onNavigate={(view) => {
-        setCurrentView(view);
-        setEditTrade(undefined);
-      }} 
+      onNavigate={handleNavigate} 
       user={user}
       onLogout={handleLogout}
     >
-      {currentView === 'dashboard' && <Dashboard />}
+      {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
       
       {currentView === 'operaciones' && (
         <TradeList onEdit={(trade) => {
@@ -76,7 +73,6 @@ export default function App() {
       
       {currentView === 'traders' && <TraderList />}
       
-      {/* Utilidad para facilitar la instalación de la aplicación como PWA */}
       <InstallBanner />
     </Layout>
   );

@@ -25,13 +25,17 @@ import {
   Filter, 
   Target, 
   ArrowDownCircle, 
-  Calendar, 
-  User,
   Zap,
-  BarChart3
+  BarChart3,
+  PlusCircle,
+  User
 } from 'lucide-react';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigate?: (view: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [traders, setTraders] = useState<Trader[]>([]);
   const [filters, setFilters] = useState({
@@ -42,11 +46,9 @@ const Dashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [tData, trData] = await Promise.all([
-        dbService.getTrades(),
-        dbService.getTraders()
-      ]);
+    const fetchData = () => {
+      const tData = dbService.getTrades();
+      const trData = dbService.getTraders();
       setTrades(tData);
       setTraders(trData);
     };
@@ -315,34 +317,73 @@ const Dashboard: React.FC = () => {
                  <p className="text-3xl font-black text-rose-600 leading-none">{filteredTrades.filter(t => t.resultado_estado === 'Perdedora').length}</p>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Loss</p>
                </div>
-               <div className="w-px h-10 bg-slate-100" />
-               <div className="text-center flex-1">
-                 <p className="text-3xl font-black text-slate-300 leading-none">{filteredTrades.filter(t => t.resultado_estado === 'BE' || t.resultado_estado === 'Parcial').length}</p>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Neutral</p>
-               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="bg-slate-900 rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-xl">
+          <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-800/20">
+              <h3 className="font-black text-lg flex items-center gap-3 text-white">
+                  {/* Fix: Changed 'class' to 'className' and camelCased stroke attributes */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                  Historial Reciente
+              </h3>
+              <button 
+                onClick={() => onNavigate?.('registrar')}
+                className="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-widest hover:bg-blue-500 transition-colors flex items-center gap-2"
+              >
+                <PlusCircle size={14} />
+                Nuevo Registro
+              </button>
+          </div>
+          {filteredTrades.length === 0 ? (
+            <div className="p-12 text-center text-slate-600 font-bold italic text-sm">
+                Aún no has registrado operaciones en esta sesión local.
+            </div>
+          ) : (
+            <div className="p-4 overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <tr>
+                    <th className="px-4 py-3">Activo</th>
+                    <th className="px-4 py-3">Resultado</th>
+                    <th className="px-4 py-3">Ratio R</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredTrades.slice(-5).reverse().map((trade) => (
+                    <tr key={trade.id} className="text-slate-300">
+                      <td className="px-4 py-3 font-bold">{trade.activo}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${trade.resultado_estado === 'Ganadora' ? 'bg-emerald-50/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                          {trade.resultado_estado}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-black">{trade.resultado_r?.toFixed(2)} R</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
       </div>
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
           <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
             <User size={20} className="text-slate-400" />
-            Ranking por Rentabilidad (Ratio R)
+            Ranking por Rentabilidad
           </h3>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">Equipo Alpha</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">Equipo Academy</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <tr>
                 <th className="px-8 py-5">Nombre Miembro</th>
-                <th className="px-8 py-5">Ops</th>
-                <th className="px-8 py-5">Winrate</th>
-                <th className="px-8 py-5">R Acumulado</th>
-                <th className="px-8 py-5">Promedio/Op</th>
                 <th className="px-8 py-5 text-center">Consistencia</th>
+                <th className="px-8 py-5">R Acumulado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -356,18 +397,6 @@ const Dashboard: React.FC = () => {
                       <span className="font-bold text-slate-700">{tr.nombre}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-sm font-bold text-slate-500">{tr.total}</td>
-                  <td className="px-8 py-5">
-                    <span className={`text-sm font-black ${tr.wr >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {tr.wr.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className={`px-8 py-5 font-black text-base ${tr.r >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
-                    {tr.r >= 0 ? '+' : ''}{tr.r.toFixed(2)} R
-                  </td>
-                  <td className="px-8 py-5 text-sm text-slate-600 font-bold">
-                    {tr.avg.toFixed(2)} R/op
-                  </td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
@@ -379,18 +408,13 @@ const Dashboard: React.FC = () => {
                       <span className="text-[10px] font-black text-slate-400 uppercase">{tr.consistency.toFixed(0)}%</span>
                     </div>
                   </td>
+                  <td className={`px-8 py-5 font-black text-base ${tr.r >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+                    {tr.r >= 0 ? '+' : ''}{tr.r.toFixed(2)} R
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {traderRanking.length === 0 && (
-            <div className="p-20 text-center flex flex-col items-center justify-center space-y-3">
-              <div className="bg-slate-50 p-4 rounded-full text-slate-300">
-                <User size={40} />
-              </div>
-              <p className="text-slate-400 font-bold italic">No hay datos de miembros registrados aún.</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

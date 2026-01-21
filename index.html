@@ -3,180 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Journal Academy</title>
+    <title>Trading Journal Academy Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .hidden { display: none !important; }
     </style>
-<script type="importmap">
+    <script type="importmap">
 {
   "imports": {
-    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react": "https://esm.sh/react@19.2.3",
+    "react-dom": "https://esm.sh/react-dom@19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@19.2.3/client",
+    "recharts": "https://esm.sh/recharts@3.6.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.562.0",
+    "@google/genai": "https://esm.sh/@google/genai@1.38.0",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
-
-    <!-- PANTALLA DE LOGIN -->
-    <div id="login-screen" class="flex-1 flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl text-center">
-            <div class="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
-            </div>
-            <h1 class="text-3xl font-black mb-1 tracking-tight">TJ ACADEMY</h1>
-            <p class="text-slate-500 mb-8 font-bold text-xs uppercase tracking-widest">Internal Performance Hub</p>
-            
-            <form id="login-form" class="space-y-4 text-left">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] ml-1">Email Corporativo</label>
-                    <input type="email" id="email" required class="w-full bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="usuario@academia.com">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] ml-1">Contraseña</label>
-                    <input type="password" id="password" required class="w-full bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="••••••••">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 mt-4">
-                    ACCEDER AL PANEL
-                </button>
-            </form>
-            <p id="error-msg" class="text-rose-400 text-xs font-bold mt-4 hidden"></p>
-        </div>
-    </div>
-
-    <!-- PANTALLA DE DASHBOARD -->
-    <div id="dashboard-screen" class="hidden flex-1 flex flex-col">
-        <header class="bg-slate-900 border-b border-slate-800 p-5 flex justify-between items-center sticky top-0 z-50">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 p-2 rounded-lg text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
-                </div>
-                <h1 class="text-lg font-black tracking-tight uppercase">TJ Academy Pro</h1>
-            </div>
-            <div class="flex items-center gap-6">
-                <div class="hidden md:block text-right">
-                    <p id="user-display" class="text-xs font-black text-white leading-none"></p>
-                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Sesión Local Activa</p>
-                </div>
-                <button id="logout-btn" class="bg-slate-800 hover:bg-rose-600/20 text-slate-400 hover:text-rose-500 p-2.5 rounded-xl transition-all border border-slate-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                </button>
-            </div>
-        </header>
-        
-        <main class="p-6 md:p-10 max-w-6xl mx-auto w-full space-y-10">
-            <section class="bg-gradient-to-r from-blue-700 to-indigo-800 p-10 rounded-[3rem] shadow-2xl shadow-blue-900/40 relative overflow-hidden">
-                <div class="relative z-10">
-                    <h2 class="text-4xl font-black mb-2 tracking-tight">Bienvenido, Trader.</h2>
-                    <p class="text-blue-100 font-medium opacity-80 text-lg">Tu bitácora está configurada y lista para recibir datos en modo local.</p>
-                </div>
-                <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
-            </section>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 hover:border-blue-500/30 transition-colors group">
-                    <div class="bg-blue-600/10 text-blue-500 w-10 h-10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                    </div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Operaciones Totales</p>
-                    <p class="text-4xl font-black">24</p>
-                </div>
-                <div class="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 hover:border-emerald-500/30 transition-colors group">
-                    <div class="bg-emerald-600/10 text-emerald-500 w-10 h-10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    </div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Tasa de Acierto</p>
-                    <p class="text-4xl font-black text-emerald-500">62.5%</p>
-                </div>
-                <div class="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 hover:border-amber-500/30 transition-colors group">
-                    <div class="bg-amber-600/10 text-amber-500 w-10 h-10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    </div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Ratio R Total</p>
-                    <p class="text-4xl font-black text-blue-500">+12.4</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-xl">
-                <div class="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-800/20">
-                    <h3 class="font-black text-lg flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                        Historial Reciente
-                    </h3>
-                    <button class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-widest hover:bg-blue-500 transition-colors">Nuevo Registro</button>
-                </div>
-                <div class="p-12 text-center text-slate-600 font-bold italic text-sm">
-                    Aún no has registrado operaciones en esta sesión local.
-                </div>
-            </div>
-        </main>
-        
-        <footer class="mt-auto p-10 text-center">
-            <p class="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Academy Pro Hub • v4.0.0 Stable</p>
-        </footer>
-    </div>
-
-    <script>
-        // DOM Elements
-        const loginScreen = document.getElementById('login-screen');
-        const dashboardScreen = document.getElementById('dashboard-screen');
-        const loginForm = document.getElementById('login-form');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userDisplay = document.getElementById('user-display');
-        const errorMsg = document.getElementById('error-msg');
-
-        // Logic
-        function checkAuth() {
-            try {
-                const userJson = localStorage.getItem('current_user');
-                if (userJson) {
-                    const userData = JSON.parse(userJson);
-                    if (userDisplay) userDisplay.textContent = userData.email;
-                    loginScreen.classList.add('hidden');
-                    dashboardScreen.classList.remove('hidden');
-                } else {
-                    loginScreen.classList.remove('hidden');
-                    dashboardScreen.classList.add('hidden');
-                }
-            } catch (e) {
-                console.error("Auth check failed", e);
-                localStorage.removeItem('current_user');
-            }
-        }
-
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            if (email && password) {
-                const user = {
-                    id: 'usr_' + Math.random().toString(36).substr(2, 9),
-                    email: email,
-                    created_at: new Date().toISOString()
-                };
-                localStorage.setItem('current_user', JSON.stringify(user));
-                checkAuth();
-            } else {
-                errorMsg.textContent = 'Completa todos los campos obligatorios.';
-                errorMsg.classList.remove('hidden');
-            }
-        });
-
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('current_user');
-            checkAuth();
-        });
-
-        // Initialize immediately
-        document.addEventListener('DOMContentLoaded', checkAuth);
-        checkAuth(); // Call immediately as well
-    </script>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
