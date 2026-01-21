@@ -34,6 +34,9 @@ export const dbService = {
       user_id: t.user_id,
       trader_id: t.trader_id.toString(),
       fecha_entrada: t.fecha,
+      hora_entrada: t.hora_entrada || '',
+      horario_entrada: t.hora_entrada || '',
+      dia_semana: t.dia_semana || '',
       activo: t.activo,
       direccion: t.direccion,
       resultado_estado: t.estado,
@@ -57,6 +60,8 @@ export const dbService = {
       user_id: user.id,
       trader_id: parseInt(trade.trader_id || "0"),
       fecha: trade.fecha_entrada,
+      hora_entrada: trade.hora_entrada,
+      dia_semana: trade.dia_semana,
       activo: trade.activo,
       direccion: trade.direccion,
       estado: trade.resultado_estado || 'Pendiente',
@@ -105,7 +110,7 @@ export const dbService = {
   getTraders: (): Trader[] => [],
 
   saveTrader: async (trader: Partial<Trader>) => {
-const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado");
 
     const traderData = {

@@ -6,7 +6,7 @@ import {
   DIRECTIONS, 
   STATUSES 
 } from '../constants';
-import { Save, ChevronLeft, Trash2, Info, Target, Clock, ClipboardCheck, Loader2, Users } from 'lucide-react';
+import { Save, ChevronLeft, Trash2, Info, Target, Clock, ClipboardCheck, Loader2, Users, Calendar } from 'lucide-react';
 
 interface TradeFormProps {
   editTrade?: Trade;
@@ -17,9 +17,17 @@ interface TradeFormProps {
 const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel }) => {
   const [traders, setTraders] = useState<Trader[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  const getDayName = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr + 'T12:00:00'); // Midday to avoid timezone shifts
+    return new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(date);
+  };
+
   const [formData, setFormData] = useState<Partial<Trade>>({
     fecha_entrada: new Date().toISOString().split('T')[0],
     hora_entrada: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+    dia_semana: getDayName(new Date().toISOString().split('T')[0]),
     sesion: 'Londres' as SessionType,
     tipo_operativa: 'operativa_propia',
     tipo_instrumento: 'FX',
@@ -52,10 +60,20 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value
-    }));
+    
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: type === 'number' ? parseFloat(value) : value
+      };
+      
+      // Auto-update day name if date changes
+      if (name === 'fecha_entrada') {
+        newData.dia_semana = getDayName(value);
+      }
+      
+      return newData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,6 +195,27 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
                 onChange={handleChange}
               />
             </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-600 ml-1">Horario Entrada</label>
+              <input 
+                type="time"
+                name="hora_entrada"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                value={formData.hora_entrada}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-600 ml-1">Día (Auto)</label>
+              <input 
+                type="text"
+                readOnly
+                className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-500 outline-none capitalize"
+                value={formData.dia_semana || ''}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-600 ml-1">Sesión</label>
               <select 

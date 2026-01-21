@@ -20,7 +20,7 @@ export interface Trader {
   updated_at: string;
 }
 
-export type SessionType = 'Londres' | 'Nueva York' | 'Asia' | 'Extra';
+export type SessionType = 'Londres' | 'Nueva York' | 'Asia' | 'Extra' | 'Nueva York PM';
 export type OperationType = 'senal_equipo' | 'operativa_propia' | 'alumno';
 export type InstrumentType = 'FX' | 'Indice' | 'Cripto' | 'Materia prima';
 export type DirectionType = 'Largo' | 'Corto';
@@ -32,6 +32,8 @@ export interface Trade {
   trader_id: string;
   fecha_entrada: string;
   hora_entrada: string;
+  horario_entrada: string; // Nuevo campo para visualización
+  dia_semana: string;      // Nuevo campo automático
   fecha_cierre?: string;
   hora_cierre?: string;
   sesion: SessionType;
