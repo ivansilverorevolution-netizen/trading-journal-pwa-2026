@@ -12,69 +12,60 @@ import { supabase, dbService } from './services/dbService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Safety timeout to show login if loading takes too long
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
-    return () => clearTimeout(timeout);
-  }, []);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Requisito 4: false por defecto
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
 
-  const startSession = async (sessionUser: any) => {
+  const startSession = (sessionUser: any) => {
     const appUser: AppUser = {
       id: sessionUser.id,
       nombre_academia: sessionUser.user_metadata?.nombre_academia || 'Mi Academia',
       email: sessionUser.email || '',
       created_at: sessionUser.created_at || new Date().toISOString()
     };
+    
+    // Establecemos el usuario inmediatamente para desbloquear la UI
     setUser(appUser);
     localStorage.setItem('academy_auth_user', JSON.stringify(appUser));
     
-    // Sincronización automática de datos en la nube
+    // Sincronización en segundo plano (No bloquea el renderizado)
     if (dbService.isCloudEnabled()) {
-      setIsSyncing(true);
-      try {
-        await dbService.syncFromCloud();
-      } catch (e) {
-        console.warn("Fallo sincronización, usando caché local.");
-      } finally {
-        setIsSyncing(false);
-      }
+      dbService.syncFromCloud().catch(e => {
+        console.warn("Sincronización silenciosa fallida, usando caché local.", e);
+      });
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
+      setIsLoading(true); // Activamos carga solo durante la verificación
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await startSession(session.user);
+          startSession(session.user);
         } else {
-          // Fallback local por si se perdió la conexión pero hay datos previos
+          // Intentar recuperar de cache local si no hay sesión para evitar flash de login
           const stored = localStorage.getItem('academy_auth_user');
           if (stored) {
-             // Verificamos si realmente hay una sesión activa, si no limpiamos
-             setUser(null);
+             const cachedUser = JSON.parse(stored);
+             // Solo permitimos si hay datos válidos, pero el login real lo maneja Supabase
+             // Si queremos ser estrictos con la sesión, dejamos setUser(null)
+             setUser(null); 
           }
         }
       } catch (e) {
         console.error("Auth init error:", e);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Requisito 5: Siempre se libera
       }
     };
 
     initAuth();
 
     // Suscripción a cambios de estado de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        await startSession(session.user);
+        startSession(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         localStorage.removeItem('academy_auth_user');
@@ -84,7 +75,7 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = async (newUser: AppUser) => {
+  const handleLogin = (newUser: AppUser) => {
     setUser(newUser);
     setCurrentView('dashboard');
   };
@@ -106,26 +97,15 @@ const App: React.FC = () => {
     setCurrentView('operaciones');
   };
 
-  if (isLoading) return (
+  // Pantalla de carga mínima y optimizada
+  if (isLoading && !user) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
       <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Cargando Perfil...</p>
+      <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Verificando Credenciales...</p>
     </div>
   );
 
-  if (isSyncing) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-6">
-      <div className="relative w-24 h-24">
-         <div className="absolute inset-0 border-4 border-blue-600/20 rounded-full"></div>
-         <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-      <div className="text-center space-y-2">
-        <p className="text-white font-black tracking-[0.3em] uppercase text-sm">Actualizando Bitácora</p>
-        <p className="text-slate-500 text-[10px] font-bold uppercase">Sincronizando con la nube...</p>
-      </div>
-    </div>
-  );
-
+  // Requisito 1: Si no hay sesión, Login inmediatamente
   if (!user) {
     return (
       <>
@@ -159,6 +139,7 @@ const App: React.FC = () => {
     }
   };
 
+  // Requisito 2: Si hay sesión, Dashboard (a través del renderView)
   return (
     <Layout 
       currentView={currentView} 
