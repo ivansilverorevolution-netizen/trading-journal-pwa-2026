@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -5,6 +6,7 @@ import TradeList from './components/TradeList';
 import TradeForm from './components/TradeForm';
 import TraderList from './components/TraderList';
 import Login from './components/Login';
+import InstallBanner from './components/InstallBanner';
 import { dbService } from './services/dbService';
 import { supabase } from './services/supabaseClient';
 import { AppUser, Trade } from './types';
@@ -16,24 +18,30 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check initial session
+    // Escuchar cambios de sesión en Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        dbService.setCurrentUser(session.user);
-        setUser(dbService.getCurrentUser());
-        refreshData();
+        const academyUser = dbService.getCurrentUser();
+        setUser({
+          id: session.user.id,
+          nombre_academia: academyUser?.nombre_academia || session.user.user_metadata?.academy_name || 'Mi Academia',
+          email: session.user.email || '',
+          created_at: session.user.created_at
+        });
       }
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        dbService.setCurrentUser(session.user);
-        setUser(dbService.getCurrentUser());
-        refreshData();
+        const academyUser = dbService.getCurrentUser();
+        setUser({
+          id: session.user.id,
+          nombre_academia: academyUser?.nombre_academia || session.user.user_metadata?.academy_name || 'Mi Academia',
+          email: session.user.email || '',
+          created_at: session.user.created_at
+        });
       } else {
-        dbService.setCurrentUser(null);
         setUser(null);
       }
     });
@@ -41,9 +49,9 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const refreshData = async () => {
-    await dbService.fetchTrades();
-    await dbService.fetchTraders();
+  const handleLogin = (loggedUser: AppUser) => {
+    dbService.setCurrentUser(loggedUser);
+    setUser(loggedUser);
   };
 
   const handleLogout = async () => {
@@ -72,37 +80,40 @@ export default function App() {
   }
 
   if (!user) {
-    return <Login />;
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
-    <Layout 
-      currentView={currentView} 
-      onNavigate={handleNavigate} 
-      user={user}
-      onLogout={handleLogout}
-    >
-      {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} onEdit={handleEditTrade} />}
-      
-      {currentView === 'operaciones' && (
-        <TradeList onEdit={handleEditTrade} />
-      )}
-      
-      {currentView === 'registrar' && (
-        <TradeForm 
-          editTrade={editTrade}
-          onSuccess={() => {
-            setEditTrade(undefined);
-            setCurrentView('dashboard');
-          }}
-          onCancel={() => {
-            setEditTrade(undefined);
-            setCurrentView('dashboard');
-          }}
-        />
-      )}
-      
-      {currentView === 'traders' && <TraderList />}
-    </Layout>
+    <div className="relative min-h-screen">
+      <InstallBanner />
+      <Layout 
+        currentView={currentView} 
+        onNavigate={handleNavigate} 
+        user={user}
+        onLogout={handleLogout}
+      >
+        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} onEdit={handleEditTrade} />}
+        
+        {currentView === 'operaciones' && (
+          <TradeList onEdit={handleEditTrade} />
+        )}
+        
+        {currentView === 'registrar' && (
+          <TradeForm 
+            editTrade={editTrade}
+            onSuccess={() => {
+              setEditTrade(undefined);
+              setCurrentView('dashboard');
+            }}
+            onCancel={() => {
+              setEditTrade(undefined);
+              setCurrentView('dashboard');
+            }}
+          />
+        )}
+        
+        {currentView === 'traders' && <TraderList />}
+      </Layout>
+    </div>
   );
 }

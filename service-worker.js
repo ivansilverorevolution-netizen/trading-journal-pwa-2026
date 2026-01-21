@@ -1,29 +1,20 @@
-// Added 'export {}' to the top of the file to treat it as a module and prevent 'Cannot redeclare block-scoped variable' errors in the global scope.
-export {};
-
 const CACHE_NAME = 'tj-academy-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/App.tsx',
   '/manifest.json'
 ];
 
-// Instalación del Service Worker
-// Fix: Use 'any' type for event to access waitUntil
-self.addEventListener('install', (event: any) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Cache abierto');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// Activación del Service Worker
-// Fix: Use 'any' type for event to access waitUntil
-self.addEventListener('activate', (event: any) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -37,13 +28,13 @@ self.addEventListener('activate', (event: any) => {
   );
 });
 
-// Fetch - estrategia Network First, fallback a Cache
-// Fix: Use 'any' type for event to access respondWith and request
-self.addEventListener('fetch', (event: any) => {
+self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clonar la respuesta
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);

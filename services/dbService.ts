@@ -1,158 +1,143 @@
-import { Trade, Trader, AppUser } from '../types';
 import { supabase } from './supabaseClient';
-
-const STORAGE_KEYS = {
-  TRADES: 'academy_trades',
-  TRADERS: 'academy_traders',
-  USER: 'academy_user'
-};
+import { Trade, Trader, AppUser } from '../types';
 
 export const dbService = {
   isCloudEnabled: () => true,
 
   getCurrentUser: (): AppUser | null => {
-    const user = localStorage.getItem(STORAGE_KEYS.USER);
+    const user = localStorage.getItem('academy_user');
     return user ? JSON.parse(user) : null;
   },
 
   setCurrentUser: (user: any) => {
     if (user) {
-      const appUser: AppUser = {
-        id: user.id,
-        email: user.email || '',
-        nombre_academia: user.user_metadata?.nombre_academia || 'Mi Academia',
-        created_at: user.created_at || new Date().toISOString()
-      };
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(appUser));
+      localStorage.setItem('academy_user', JSON.stringify(user));
     } else {
-      localStorage.removeItem(STORAGE_KEYS.USER);
-      localStorage.removeItem(STORAGE_KEYS.TRADES);
-      localStorage.removeItem(STORAGE_KEYS.TRADERS);
+      localStorage.removeItem('academy_user');
     }
   },
 
-  // Fetch all trades for current user from Supabase
+  // Operaciones de Trades - Mapeo exacto a tu SQL
   fetchTrades: async (): Promise<Trade[]> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
     const { data, error } = await supabase
       .from('trades')
-      .select('*')
-      .eq('user_id', user.id);
+      .select(`
+        *,
+        traders (nombre)
+      `)
+      .order('fecha', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching trades:', error);
-      const local = localStorage.getItem(STORAGE_KEYS.TRADES);
-      return local ? JSON.parse(local) : [];
-    }
+    if (error) throw error;
 
-    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(data));
-    return data || [];
+    return (data || []).map(t => ({
+      id: t.id,
+      user_id: t.user_id,
+      trader_id: t.trader_id.toString(),
+      fecha_entrada: t.fecha,
+      activo: t.activo,
+      direccion: t.direccion,
+      resultado_estado: t.estado,
+      resultado_r: parseFloat(t.ratio_rb),
+      sesion: t.sesion,
+      estrategia: t.estrategia,
+      nota_trader: t.notas,
+      created_at: t.created_at,
+      trader_name: t.traders?.nombre
+    })) as unknown as Trade[];
   },
 
-  getTrades: (): Trade[] => {
-    const local = localStorage.getItem(STORAGE_KEYS.TRADES);
-    return local ? JSON.parse(local) : [];
-  },
+  getTrades: (): Trade[] => [],
 
   saveTrade: async (trade: Partial<Trade>) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No auth user');
+    if (!user) throw new Error("Sesión expirada o no válida");
 
     const tradeData = {
-      ...trade,
+      id: trade.id || crypto.randomUUID(),
       user_id: user.id,
+      trader_id: parseInt(trade.trader_id || "0"),
+      fecha: trade.fecha_entrada,
+      activo: trade.activo,
+      direccion: trade.direccion,
+      estado: trade.resultado_estado || 'Pendiente',
+      ratio_rb: trade.resultado_r || 0,
+      sesion: trade.sesion,
+      estrategia: trade.estrategia,
+      notas: trade.nota_trader,
       updated_at: new Date().toISOString()
     };
 
-    let result;
-    if (trade.id) {
-      result = await supabase.from('trades').update(tradeData).eq('id', trade.id);
-    } else {
-      result = await supabase.from('trades').insert([{ ...tradeData, id: crypto.randomUUID(), created_at: new Date().toISOString() }]);
-    }
+    const { error } = await supabase
+      .from('trades')
+      .upsert(tradeData);
 
-    if (result.error) console.error('Supabase save error:', result.error);
-    
-    // Always update local for responsiveness
-    const trades = dbService.getTrades();
-    if (trade.id) {
-      const idx = trades.findIndex(t => t.id === trade.id);
-      if (idx !== -1) trades[idx] = { ...trades[idx], ...tradeData } as Trade;
-    } else {
-      trades.push({ ...tradeData, id: result.data?.[0]?.id || crypto.randomUUID() } as Trade);
-    }
-    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(trades));
+    if (error) throw error;
   },
 
   deleteTrade: async (id: string) => {
-    const { error } = await supabase.from('trades').delete().eq('id', id);
-    if (error) console.error('Supabase delete error:', error);
-
-    const trades = dbService.getTrades();
-    const filtered = trades.filter(t => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(filtered));
+    const { error } = await supabase
+      .from('trades')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 
   fetchTraders: async (): Promise<Trader[]> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
     const { data, error } = await supabase
       .from('traders')
       .select('*')
-      .eq('user_id', user.id);
+      .order('nombre');
 
-    if (error) {
-      console.error('Error fetching traders:', error);
-      const local = localStorage.getItem(STORAGE_KEYS.TRADERS);
-      return local ? JSON.parse(local) : [];
-    }
+    if (error) throw error;
 
-    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(data));
-    return data || [];
+    return (data || []).map(t => ({
+      id: t.id.toString(),
+      user_id: t.user_id,
+      nombre: t.nombre,
+      correo_electronico: t.correo,
+      rol: t.rol,
+      activo: true,
+      created_at: t.insertado_en,
+      updated_at: t.updated_at
+    })) as Trader[];
   },
 
-  getTraders: (): Trader[] => {
-    const local = localStorage.getItem(STORAGE_KEYS.TRADERS);
-    return local ? JSON.parse(local) : [];
-  },
+  getTraders: (): Trader[] => [],
 
   saveTrader: async (trader: Partial<Trader>) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No auth user');
+    if (!user) throw new Error("No autenticado");
 
     const traderData = {
-      ...trader,
       user_id: user.id,
+      nombre: trader.nombre,
+      correo: trader.correo_electronico,
+      rol: trader.rol,
       updated_at: new Date().toISOString()
     };
 
+    let error;
     if (trader.id) {
-      await supabase.from('traders').update(traderData).eq('id', trader.id);
+      const { error: e } = await supabase
+        .from('traders')
+        .update(traderData)
+        .eq('id', parseInt(trader.id));
+      error = e;
     } else {
-      await supabase.from('traders').insert([{ ...traderData, id: crypto.randomUUID(), created_at: new Date().toISOString() }]);
+      const { error: e } = await supabase
+        .from('traders')
+        .insert([traderData]);
+      error = e;
     }
 
-    const traders = dbService.getTraders();
-    if (trader.id) {
-      const idx = traders.findIndex(t => t.id === trader.id);
-      if (idx !== -1) traders[idx] = { ...traders[idx], ...traderData } as Trader;
-    } else {
-      traders.push({ ...traderData, id: crypto.randomUUID() } as Trader);
-    }
-    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(traders));
+    if (error) throw error;
   },
 
   deleteTrader: async (id: string) => {
-    await supabase.from('traders').delete().eq('id', id);
-    const traders = dbService.getTraders();
-    const filtered = traders.filter(t => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(filtered));
-  },
-
-  initializeDefaultData: () => {
-    // No longer strictly needed with Supabase but kept for structure
+    const { error } = await supabase
+      .from('traders')
+      .delete()
+      .eq('id', parseInt(id));
+    if (error) throw error;
   }
 };

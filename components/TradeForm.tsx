@@ -6,7 +6,7 @@ import {
   DIRECTIONS, 
   STATUSES 
 } from '../constants';
-import { Save, ChevronLeft, Trash2, Info, Target, Clock, ClipboardCheck, Loader2 } from 'lucide-react';
+import { Save, ChevronLeft, Trash2, Info, Target, Clock, ClipboardCheck, Loader2, Users } from 'lucide-react';
 
 interface TradeFormProps {
   editTrade?: Trade;
@@ -36,7 +36,18 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
   });
 
   useEffect(() => {
-    setTraders(dbService.getTraders());
+    const loadTraders = async () => {
+      try {
+        const data = await dbService.fetchTraders();
+        setTraders(data);
+        if (!formData.trader_id && data.length > 0) {
+          setFormData(prev => ({ ...prev, trader_id: data[0].id }));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadTraders();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -49,19 +60,14 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.activo || formData.precio_entrada === undefined) {
-      alert('Por favor completa los campos obligatorios.');
+    if (!formData.activo || !formData.trader_id) {
+      alert('Por favor completa los campos obligatorios y selecciona un trader.');
       return;
     }
     
     setLoading(true);
     try {
-      const dataToSave = {
-        ...formData,
-        trader_id: formData.trader_id || (traders.length > 0 ? traders[0].id : undefined)
-      };
-
-      await dbService.saveTrade(dataToSave);
+      await dbService.saveTrade(formData);
       onSuccess();
     } catch (err: any) {
       alert('Error al guardar: ' + err.message);
@@ -73,8 +79,14 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
   const handleDelete = async () => {
     if (editTrade && confirm('¿Eliminar esta operación definitivamente?')) {
       setLoading(true);
-      await dbService.deleteTrade(editTrade.id);
-      onSuccess();
+      try {
+        await dbService.deleteTrade(editTrade.id);
+        onSuccess();
+      } catch (err) {
+        alert('Error al eliminar');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -103,6 +115,25 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
 
       <form onSubmit={handleSubmit} className="p-8 space-y-8">
         <section className="space-y-4">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <Users size={14} /> Responsable
+          </h3>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-600 ml-1">Miembro que ejecuta *</label>
+            <select 
+              name="trader_id"
+              required
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+              value={formData.trader_id || ''}
+              onChange={handleChange}
+            >
+              <option value="">Seleccionar Miembro...</option>
+              {traders.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </select>
+          </div>
+        </section>
+
+        <section className="space-y-4 pt-6 border-t border-slate-100">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <Info size={14} /> Datos Generales
           </h3>
@@ -259,7 +290,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
             className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all flex items-center justify-center gap-3 active:scale-95"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-            GUARDAR
+            {editTrade ? 'ACTUALIZAR' : 'GUARDAR'}
           </button>
         </div>
       </form>
