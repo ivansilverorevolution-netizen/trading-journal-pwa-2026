@@ -27,6 +27,17 @@ const App: React.FC = () => {
     setUser(appUser);
     localStorage.setItem('academy_auth_user', JSON.stringify(appUser));
     
+    // Sincronización automática de datos en la nube
+    if (dbService.isCloudEnabled()) {
+      setIsSyncing(true);
+      try {
+        await dbService.syncFromCloud();
+      } catch (e) {
+        console.warn("Fallo sincronización, usando caché local.");
+      } finally {
+        setIsSyncing(false);
+      }
+    }
   };
 
   useEffect(() => {

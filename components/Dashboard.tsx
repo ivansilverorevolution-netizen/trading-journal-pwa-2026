@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { dbService } from '../services/dbService';
 import { Trade, Trader } from '../types';
+import AiAnalysis from './AiAnalysis';
 import { 
   TrendingUp, 
   Percent, 
