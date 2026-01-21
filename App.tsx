@@ -12,7 +12,7 @@ import { supabase, dbService } from './services/dbService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Requisito 4: false por defecto
+  const [isLoading, setIsLoading] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
 
@@ -24,45 +24,41 @@ const App: React.FC = () => {
       created_at: sessionUser.created_at || new Date().toISOString()
     };
     
-    // Establecemos el usuario inmediatamente para desbloquear la UI
     setUser(appUser);
     localStorage.setItem('academy_auth_user', JSON.stringify(appUser));
     
-    // Sincronización en segundo plano (No bloquea el renderizado)
+    // Background sync - non-blocking
     if (dbService.isCloudEnabled()) {
       dbService.syncFromCloud().catch(e => {
-        console.warn("Sincronización silenciosa fallida, usando caché local.", e);
+        console.warn("Background sync failed, using local cache.", e);
       });
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
-      setIsLoading(true); // Activamos carga solo durante la verificación
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          startSession(session.user);
-        } else {
-          // Intentar recuperar de cache local si no hay sesión para evitar flash de login
-          const stored = localStorage.getItem('academy_auth_user');
-          if (stored) {
-             const cachedUser = JSON.parse(stored);
-             // Solo permitimos si hay datos válidos, pero el login real lo maneja Supabase
-             // Si queremos ser estrictos con la sesión, dejamos setUser(null)
-             setUser(null); 
+      // Solo activamos carga si no hay un usuario ya en el estado para evitar bloqueos
+      if (!user) {
+        setIsLoading(true);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            startSession(session.user);
+          } else {
+            setUser(null);
           }
+        } catch (e) {
+          console.error("Auth init error:", e);
+          setUser(null);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (e) {
-        console.error("Auth init error:", e);
-      } finally {
-        setIsLoading(false); // Requisito 5: Siempre se libera
       }
     };
 
     initAuth();
 
-    // Suscripción a cambios de estado de autenticación
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         startSession(session.user);
@@ -97,15 +93,17 @@ const App: React.FC = () => {
     setCurrentView('operaciones');
   };
 
-  // Pantalla de carga mínima y optimizada
-  if (isLoading && !user) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
-      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Verificando Credenciales...</p>
-    </div>
-  );
+  // Solo mostrar pantalla de carga si estamos verificando y no tenemos usuario
+  if (isLoading && !user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Verificando Credenciales...</p>
+      </div>
+    );
+  }
 
-  // Requisito 1: Si no hay sesión, Login inmediatamente
+  // Si no hay sesión, Login inmediatamente
   if (!user) {
     return (
       <>
@@ -139,7 +137,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Requisito 2: Si hay sesión, Dashboard (a través del renderView)
+  // Si hay sesión activa, Dashboard
   return (
     <Layout 
       currentView={currentView} 
