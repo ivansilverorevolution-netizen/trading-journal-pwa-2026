@@ -5,7 +5,6 @@ import TradeList from './components/TradeList';
 import TradeForm from './components/TradeForm';
 import TraderList from './components/TraderList';
 import Login from './components/Login';
-import InstallBanner from './components/InstallBanner';
 import { dbService } from './services/dbService';
 import { AppUser, Trade } from './types';
 
@@ -14,6 +13,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
 
+  // Sync initial state with localStorage
   useEffect(() => {
     dbService.initializeDefaultData();
     const currentUser = dbService.getCurrentUser();
@@ -30,11 +30,17 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     dbService.setCurrentUser(null);
+    setCurrentView('dashboard');
   };
 
   const handleNavigate = (view: string) => {
     setCurrentView(view);
     setEditTrade(undefined);
+  };
+
+  const handleEditTrade = (trade: Trade) => {
+    setEditTrade(trade);
+    setCurrentView('registrar');
   };
 
   if (!user) {
@@ -51,10 +57,7 @@ export default function App() {
       {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
       
       {currentView === 'operaciones' && (
-        <TradeList onEdit={(trade) => {
-          setEditTrade(trade);
-          setCurrentView('registrar');
-        }} />
+        <TradeList onEdit={handleEditTrade} />
       )}
       
       {currentView === 'registrar' && (
@@ -72,8 +75,6 @@ export default function App() {
       )}
       
       {currentView === 'traders' && <TraderList />}
-      
-      <InstallBanner />
     </Layout>
   );
 }
