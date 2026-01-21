@@ -16,7 +16,8 @@ export const dbService = {
     if (!data) return null;
     try {
       return JSON.parse(data);
-    } catch {
+    } catch (error) {
+      console.error("User parse error", error);
       return null;
     }
   },
@@ -26,18 +27,17 @@ export const dbService = {
     if (!user) return [];
     const data = localStorage.getItem(STORAGE_KEYS.TRADERS);
     const traders: Trader[] = data ? JSON.parse(data) : [];
-    return traders.filter(t => t.user_id === user.id);
+    return traders.filter((t: Trader) => t.user_id === user.id);
   },
 
   saveTrader(traderData: Partial<Trader>): Trader {
     const user = this.getCurrentUser();
     const userId = user?.id || 'default-user';
     
-    const traders = this.getTraders();
     const newTrader: Trader = {
       id: traderData.id || crypto.randomUUID(),
       user_id: userId,
-      nombre: traderData.nombre || 'Nuevo Miembro',
+      nombre: traderData.nombre || 'New Member',
       correo_electronico: traderData.correo_electronico || '',
       rol: traderData.rol || 'alumno',
       activo: traderData.activo ?? true,
@@ -48,7 +48,7 @@ export const dbService = {
     const allTradersData = localStorage.getItem(STORAGE_KEYS.TRADERS);
     let allTraders: Trader[] = allTradersData ? JSON.parse(allTradersData) : [];
     
-    const index = allTraders.findIndex(t => t.id === newTrader.id);
+    const index = allTraders.findIndex((t: Trader) => t.id === newTrader.id);
     if (index > -1) {
       allTraders[index] = newTrader;
     } else {
@@ -63,7 +63,7 @@ export const dbService = {
     const allTradersData = localStorage.getItem(STORAGE_KEYS.TRADERS);
     if (!allTradersData) return;
     const allTraders: Trader[] = JSON.parse(allTradersData);
-    const filtered = allTraders.filter(t => t.id !== id);
+    const filtered = allTraders.filter((t: Trader) => t.id !== id);
     localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(filtered));
   },
 
@@ -75,10 +75,10 @@ export const dbService = {
     const trades: Trade[] = data ? JSON.parse(data) : [];
     
     return trades
-      .filter(t => t.user_id === user.id)
-      .map(trade => ({
+      .filter((t: Trade) => t.user_id === user.id)
+      .map((trade: Trade) => ({
         ...trade,
-        trader_name: traders.find(tr => tr.id === trade.trader_id)?.nombre || 'Desconocido'
+        trader_name: traders.find((tr: Trader) => tr.id === trade.trader_id)?.nombre || 'Unknown'
       }));
   },
 
@@ -97,7 +97,7 @@ export const dbService = {
     const allTradesData = localStorage.getItem(STORAGE_KEYS.TRADES);
     let allTrades: Trade[] = allTradesData ? JSON.parse(allTradesData) : [];
     
-    const index = allTrades.findIndex(t => t.id === newTrade.id);
+    const index = allTrades.findIndex((t: Trade) => t.id === newTrade.id);
     if (index > -1) {
       allTrades[index] = newTrade;
     } else {
@@ -112,7 +112,7 @@ export const dbService = {
     const allTradesData = localStorage.getItem(STORAGE_KEYS.TRADES);
     if (!allTradesData) return;
     const allTrades: Trade[] = JSON.parse(allTradesData);
-    const filtered = allTrades.filter(t => t.id !== id);
+    const filtered = allTrades.filter((t: Trade) => t.id !== id);
     localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(filtered));
   },
 

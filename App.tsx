@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import TradeForm from './components/TradeForm';
@@ -10,8 +10,8 @@ import { Trade, AppUser } from './types';
 import { dbService } from './services/dbService';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<AppUser | null>(dbService.getCurrentUser());
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [user, setUser] = useState<AppUser | null>(() => dbService.getCurrentUser());
+  const [currentView, setCurrentView] = useState<string>('dashboard');
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
 
   const handleLogin = (newUser: AppUser) => {
@@ -46,7 +46,7 @@ const App: React.FC = () => {
     );
   }
 
-  const renderView = () => {
+  const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
         return <Dashboard />;
@@ -77,7 +77,7 @@ const App: React.FC = () => {
       user={user} 
       onLogout={handleLogout}
     >
-      {renderView()}
+      {renderContent()}
       <InstallBanner />
     </Layout>
   );

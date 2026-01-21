@@ -1,16 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/dbService';
-import { Trade, Trader, SessionType, OperationType, InstrumentType, DirectionType, ResultStatusType } from '../types';
+import { Trade, Trader } from '../types';
 import { 
   SESSIONS, 
   OP_TYPES, 
-  INSTRUMENTS, 
   DIRECTIONS, 
-  TIMEFRAMES, 
-  STATUSES,
-  GESTION_TYPES,
-  ERROR_TYPES 
+  STATUSES 
 } from '../constants';
 import { Save, ChevronLeft, Trash2, Info, Target, Clock } from 'lucide-react';
 
@@ -34,9 +29,9 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
     ...editTrade
   });
 
-  // Fix: dbService.getTraders() is synchronous, so we call setTraders directly
   useEffect(() => {
-    setTraders(dbService.getTraders());
+    const data = dbService.getTraders();
+    setTraders(data);
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -47,21 +42,28 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.trader_id || !formData.activo || !formData.precio_entrada) {
       alert('Por favor completa los campos obligatorios marcados con *');
       return;
     }
-    await dbService.saveTrade(formData);
+    dbService.saveTrade(formData);
     onSuccess();
+  };
+
+  const handleDelete = () => {
+    if (editTrade && confirm('¿Eliminar esta operación del historial?')) {
+      dbService.deleteTrade(editTrade.id);
+      onSuccess();
+    }
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden max-w-2xl mx-auto mb-10 animate-in fade-in zoom-in-95 duration-300">
       <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={onCancel} className="text-white p-1 hover:bg-slate-800 rounded transition-colors">
+          <button onClick={onCancel} className="text-white p-1 hover:bg-slate-800 rounded transition-colors" type="button">
             <ChevronLeft size={20} />
           </button>
           <h2 className="text-lg font-bold text-white">
@@ -70,14 +72,9 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
         </div>
         {editTrade && (
           <button 
-            // Fix: dbService.deleteTrade() is synchronous, call onSuccess immediately after
-            onClick={() => {
-              if (confirm('¿Eliminar esta operación del historial?')) {
-                dbService.deleteTrade(editTrade.id);
-                onSuccess();
-              }
-            }}
+            onClick={handleDelete}
             className="text-red-400 hover:text-red-300 p-1"
+            type="button"
           >
             <Trash2 size={18} />
           </button>

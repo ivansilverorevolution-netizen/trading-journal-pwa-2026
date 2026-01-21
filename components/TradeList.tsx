@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { dbService } from '../services/dbService';
 import { Trade, Trader } from '../types';
-import { Download, Edit3, Filter, Search, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { STATUSES, SESSIONS } from '../constants';
+import { Download, Edit3, Search, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { SESSIONS } from '../constants';
 
 interface TradeListProps {
   onEdit: (trade: Trade) => void;
@@ -23,19 +22,14 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [tData, trData] = await Promise.all([
-        dbService.getTrades(),
-        dbService.getTraders()
-      ]);
-      setTrades(tData);
-      setTraders(trData);
-    };
-    fetchData();
+    const tradeData = dbService.getTrades();
+    const traderData = dbService.getTraders();
+    setTrades(tradeData);
+    setTraders(traderData);
   }, []);
 
   const filteredTrades = useMemo(() => {
-    return trades.filter(t => {
+    return trades.filter((t: Trade) => {
       if (filters.startDate && t.fecha_entrada < filters.startDate) return false;
       if (filters.endDate && t.fecha_entrada > filters.endDate) return false;
       if (filters.trader && t.trader_id !== filters.trader) return false;
@@ -44,7 +38,7 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
       if (filters.strategy && t.estrategia !== filters.strategy) return false;
       if (filters.type && t.tipo_operativa !== filters.type) return false;
       return true;
-    }).sort((a, b) => {
+    }).sort((a: Trade, b: Trade) => {
       const dateA = new Date(`${a.fecha_entrada} ${a.hora_entrada}`).getTime();
       const dateB = new Date(`${b.fecha_entrada} ${b.hora_entrada}`).getTime();
       return dateB - dateA;
@@ -53,7 +47,7 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
 
   const exportToCSV = () => {
     const headers = ['Fecha', 'Hora', 'Miembro', 'Activo', 'Direccion', 'Sesion', 'Estrategia', 'Resultado', 'Ratio R/B'];
-    const rows = filteredTrades.map(t => [
+    const rows = filteredTrades.map((t: Trade) => [
       t.fecha_entrada,
       t.hora_entrada,
       t.trader_name,
@@ -164,7 +158,7 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filteredTrades.map((trade) => (
+            {filteredTrades.map((trade: Trade) => (
               <tr key={trade.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="font-bold text-slate-800 text-sm">{trade.fecha_entrada}</div>
@@ -211,7 +205,7 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
       </div>
 
       <div className="md:hidden space-y-4">
-        {filteredTrades.map(trade => (
+        {filteredTrades.map((trade: Trade) => (
           <div 
             key={trade.id} 
             className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between active:scale-95 transition-transform"
