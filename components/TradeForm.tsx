@@ -34,8 +34,9 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
     ...editTrade
   });
 
+  // Fix: dbService.getTraders() is synchronous, so we call setTraders directly
   useEffect(() => {
-    dbService.getTraders().then(setTraders);
+    setTraders(dbService.getTraders());
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -69,9 +70,11 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
         </div>
         {editTrade && (
           <button 
+            // Fix: dbService.deleteTrade() is synchronous, call onSuccess immediately after
             onClick={() => {
               if (confirm('¿Eliminar esta operación del historial?')) {
-                dbService.deleteTrade(editTrade.id).then(onSuccess);
+                dbService.deleteTrade(editTrade.id);
+                onSuccess();
               }
             }}
             className="text-red-400 hover:text-red-300 p-1"

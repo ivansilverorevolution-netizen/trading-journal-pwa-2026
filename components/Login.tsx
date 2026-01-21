@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { LogIn, UserPlus, ShieldCheck, TrendingUp, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { AppUser } from '../types';
-import { dbService } from '../services/dbService';
 
 interface LoginProps {
   onLogin: (user: AppUser) => void;
@@ -17,43 +15,38 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [academyName, setAcademyName] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (!email || !password) {
+      setError('Por favor completa todos los campos.');
+      return;
+    }
+
     setLoading(true);
 
-    // Artificial delay to simulate a real login without network blocking
-    setTimeout(async () => {
+    // Minimal delay for UX feedback, but strictly local
+    setTimeout(() => {
       try {
-        if (isRegister) {
-          if (!academyName.trim()) throw new Error("El nombre de la academia es obligatorio");
-          
-          const newUser: AppUser = {
-            id: crypto.randomUUID(),
-            nombre_academia: academyName,
-            email: email,
-            created_at: new Date().toISOString()
-          };
-          
-          // Initialize local data for the new user
-          await dbService.initializeMockData(newUser.id);
-          onLogin(newUser);
-        } else {
-          // Mock login: any credentials work for now in local mode
-          const user: AppUser = {
-            id: 'local-session-id',
-            nombre_academia: 'Mi Academia Local',
-            email: email,
-            created_at: new Date().toISOString()
-          };
-          onLogin(user);
+        if (isRegister && !academyName.trim()) {
+          throw new Error("El nombre de la academia es obligatorio");
         }
+
+        const user: AppUser = {
+          id: crypto.randomUUID(),
+          nombre_academia: isRegister ? academyName : 'Mi Academia Local',
+          email: email,
+          created_at: new Date().toISOString()
+        };
+        
+        onLogin(user);
       } catch (err: any) {
         setError(err.message || 'Error al procesar la solicitud.');
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -67,20 +60,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <TrendingUp size={40} className="text-white" />
           </div>
           <h1 className="text-4xl font-black text-white tracking-tight">Trading Academy</h1>
-          <p className="text-slate-400 mt-2 font-medium">Internal Performance Hub (Modo Local)</p>
+          <p className="text-slate-400 mt-2 font-medium tracking-wide">Hub de Alto Rendimiento (Modo Local)</p>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl">
           <div className="flex bg-slate-800/50 p-1 rounded-2xl mb-8">
             <button 
-              disabled={loading}
               onClick={() => { setIsRegister(false); setError(''); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${!isRegister ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
             >
               Entrar
             </button>
             <button 
-              disabled={loading}
               onClick={() => { setIsRegister(true); setError(''); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${isRegister ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
             >
@@ -94,8 +85,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre Academia</label>
                 <input 
                   required
-                  disabled={loading}
-                  className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50"
+                  className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   placeholder="Alpha Trading Academy"
                   value={academyName}
                   onChange={e => setAcademyName(e.target.value)}
@@ -108,8 +98,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <input 
                 required
                 type="email"
-                disabled={loading}
-                className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50"
+                className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                 placeholder="tu@email.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -121,9 +110,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <div className="relative">
                 <input 
                   required
-                  disabled={loading}
                   type={showPassword ? "text" : "password"}
-                  className="w-full bg-slate-800/50 border border-slate-700 p-4 pr-12 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50"
+                  className="w-full bg-slate-800/50 border border-slate-700 p-4 pr-12 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -150,13 +138,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4 disabled:opacity-70"
             >
               {loading ? <Loader2 size={20} className="animate-spin" /> : (isRegister ? <UserPlus size={20} /> : <LogIn size={20} />)}
-              {loading ? 'Procesando...' : (isRegister ? 'Crear Perfil Academy' : 'Acceder')}
+              {loading ? 'Accediendo...' : (isRegister ? 'Crear Perfil Academy' : 'Entrar Ahora')}
             </button>
           </form>
         </div>
 
         <p className="text-center text-slate-500 text-[10px] mt-8 uppercase tracking-[0.2em]">
-          <ShieldCheck size={12} className="inline mr-1 mb-0.5" /> Almacenamiento Local Seguro
+          <ShieldCheck size={12} className="inline mr-1 mb-0.5" /> 100% Privacidad en Almacenamiento Local
         </p>
       </div>
     </div>

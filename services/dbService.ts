@@ -1,127 +1,130 @@
-
 import { Trader, Trade, AppUser } from '../types';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// --- SUPABASE CONFIGURATION (DISABLED) ---
-const SUPABASE_URL = 'https://zrpfulkklnjnkrvuiwbo.supabase.co'; 
-const SUPABASE_KEY = 'sb_publishable_ElIgYT9fhZ-8oMFB-O1Pow_hycvPm9m';
-
-const TRADERS_KEY = 'academy_traders_v3';
-const TRADES_KEY = 'academy_trades_v3';
-
-// Client kept for type safety if needed, but not used for network calls
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const STORAGE_KEYS = {
+  TRADERS: 'academy_traders_local',
+  TRADES: 'academy_trades_local',
+  USER: 'current_user'
+};
 
 export const dbService = {
   isCloudEnabled(): boolean {
-    // FORCE FALSE: Completely disable cloud features as requested
     return false;
   },
 
-  async getCurrentUserId(): Promise<string | null> {
-    const stored = localStorage.getItem('academy_auth_user');
-    if (stored) {
-      const user = JSON.parse(stored);
-      return user.id;
-    }
-    return 'local-default-user';
-  },
-
-  async syncFromCloud(): Promise<void> {
-    // No-op: Cloud sync is disabled
-    return Promise.resolve();
-  },
-
-  async initializeMockData(userId: string) {
+  getCurrentUser(): AppUser | null {
+    const data = localStorage.getItem(STORAGE_KEYS.USER);
+    if (!data) return null;
     try {
-      const traders = await this.getTraders();
-      if (traders.length === 0) {
-        await this.saveTrader({
-          nombre: 'ADMIN ACADEMIA',
-          rol: 'analista_senior',
-          activo: true
-        });
-      }
-    } catch (e) {
-      console.error("Error initializing local data:", e);
+      return JSON.parse(data);
+    } catch {
+      return null;
     }
   },
 
-  async getTraders(): Promise<Trader[]> {
-    const userId = await this.getCurrentUserId();
-    const data = localStorage.getItem(TRADERS_KEY);
-    const allTraders: Trader[] = data ? JSON.parse(data) : [];
-    return allTraders.filter(t => t.user_id === userId);
+  getTraders(): Trader[] {
+    const user = this.getCurrentUser();
+    if (!user) return [];
+    const data = localStorage.getItem(STORAGE_KEYS.TRADERS);
+    const traders: Trader[] = data ? JSON.parse(data) : [];
+    return traders.filter(t => t.user_id === user.id);
   },
 
-  async saveTrader(trader: Partial<Trader>): Promise<Trader> {
-    const userId = await this.getCurrentUserId() || 'local-default-user';
-
+  saveTrader(traderData: Partial<Trader>): Trader {
+    const user = this.getCurrentUser();
+    const userId = user?.id || 'default-user';
+    
+    const traders = this.getTraders();
     const newTrader: Trader = {
-      id: trader.id || crypto.randomUUID(),
+      id: traderData.id || crypto.randomUUID(),
       user_id: userId,
-      nombre: trader.nombre || 'Nuevo Miembro',
-      correo_electronico: trader.correo_electronico || '',
-      rol: trader.rol || 'alumno',
-      activo: trader.activo !== undefined ? trader.activo : true,
-      created_at: trader.created_at || new Date().toISOString(),
+      nombre: traderData.nombre || 'Nuevo Miembro',
+      correo_electronico: traderData.correo_electronico || '',
+      rol: traderData.rol || 'alumno',
+      activo: traderData.activo ?? true,
+      created_at: traderData.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    const allData = localStorage.getItem(TRADERS_KEY);
-    const traders: Trader[] = allData ? JSON.parse(allData) : [];
-    const index = traders.findIndex(t => t.id === newTrader.id);
-    if (index > -1) traders[index] = newTrader;
-    else traders.push(newTrader);
-    localStorage.setItem(TRADERS_KEY, JSON.stringify(traders));
+    const allTradersData = localStorage.getItem(STORAGE_KEYS.TRADERS);
+    let allTraders: Trader[] = allTradersData ? JSON.parse(allTradersData) : [];
+    
+    const index = allTraders.findIndex(t => t.id === newTrader.id);
+    if (index > -1) {
+      allTraders[index] = newTrader;
+    } else {
+      allTraders.push(newTrader);
+    }
 
+    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(allTraders));
     return newTrader;
   },
 
-  async deleteTrader(id: string): Promise<void> {
-    const data = localStorage.getItem(TRADERS_KEY);
-    const traders: Trader[] = data ? JSON.parse(data) : [];
-    localStorage.setItem(TRADERS_KEY, JSON.stringify(traders.filter(t => t.id !== id)));
+  deleteTrader(id: string): void {
+    const allTradersData = localStorage.getItem(STORAGE_KEYS.TRADERS);
+    if (!allTradersData) return;
+    const allTraders: Trader[] = JSON.parse(allTradersData);
+    const filtered = allTraders.filter(t => t.id !== id);
+    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(filtered));
   },
 
-  async getTrades(): Promise<Trade[]> {
-    const userId = await this.getCurrentUserId();
-    const traders = await this.getTraders();
+  getTrades(): Trade[] {
+    const user = this.getCurrentUser();
+    if (!user) return [];
+    const traders = this.getTraders();
+    const data = localStorage.getItem(STORAGE_KEYS.TRADES);
+    const trades: Trade[] = data ? JSON.parse(data) : [];
     
-    const data = localStorage.getItem(TRADES_KEY);
-    const allTrades: Trade[] = data ? JSON.parse(data) : [];
-    return allTrades
-      .filter(t => t.user_id === userId)
+    return trades
+      .filter(t => t.user_id === user.id)
       .map(trade => ({
         ...trade,
-        trader_name: traders.find(t => t.id === trade.trader_id)?.nombre || 'Desconocido'
+        trader_name: traders.find(tr => tr.id === trade.trader_id)?.nombre || 'Desconocido'
       }));
   },
 
-  async saveTrade(trade: Partial<Trade>): Promise<Trade> {
-    const userId = await this.getCurrentUserId() || 'local-default-user';
+  saveTrade(tradeData: Partial<Trade>): Trade {
+    const user = this.getCurrentUser();
+    const userId = user?.id || 'default-user';
 
     const newTrade: Trade = {
-      ...trade as Trade,
-      id: trade.id || crypto.randomUUID(),
+      ...tradeData as Trade,
+      id: tradeData.id || crypto.randomUUID(),
       user_id: userId,
-      created_at: trade.created_at || new Date().toISOString(),
+      created_at: tradeData.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    const allData = localStorage.getItem(TRADES_KEY);
-    const trades: Trade[] = allData ? JSON.parse(allData) : [];
-    const index = trades.findIndex(t => t.id === newTrade.id);
-    if (index > -1) trades[index] = newTrade;
-    else trades.push(newTrade);
-    localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+    const allTradesData = localStorage.getItem(STORAGE_KEYS.TRADES);
+    let allTrades: Trade[] = allTradesData ? JSON.parse(allTradesData) : [];
+    
+    const index = allTrades.findIndex(t => t.id === newTrade.id);
+    if (index > -1) {
+      allTrades[index] = newTrade;
+    } else {
+      allTrades.push(newTrade);
+    }
 
+    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(allTrades));
     return newTrade;
   },
 
-  async deleteTrade(id: string): Promise<void> {
-    const data = localStorage.getItem(TRADES_KEY);
-    const trades: Trade[] = data ? JSON.parse(data) : [];
-    localStorage.setItem(TRADES_KEY, JSON.stringify(trades.filter(t => t.id !== id)));
+  deleteTrade(id: string): void {
+    const allTradesData = localStorage.getItem(STORAGE_KEYS.TRADES);
+    if (!allTradesData) return;
+    const allTrades: Trade[] = JSON.parse(allTradesData);
+    const filtered = allTrades.filter(t => t.id !== id);
+    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(filtered));
+  },
+
+  initializeDefaultData(userId: string): void {
+    const traders = this.getTraders();
+    if (traders.length === 0) {
+      this.saveTrader({
+        nombre: 'ADMIN ACADEMIA',
+        rol: 'analista_senior',
+        activo: true,
+        user_id: userId
+      });
+    }
   }
 };

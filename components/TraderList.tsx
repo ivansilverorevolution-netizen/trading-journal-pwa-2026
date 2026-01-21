@@ -16,14 +16,15 @@ const TraderList: React.FC = () => {
     activo: true
   });
 
+  // Fix: dbService.getTraders() is synchronous, call setTraders directly
   useEffect(() => {
-    dbService.getTraders().then(setTraders);
+    setTraders(dbService.getTraders());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await dbService.saveTrader({ ...formData, id: editingId || undefined });
-    const updated = await dbService.getTraders();
+    const updated = dbService.getTraders();
     setTraders(updated);
     setShowForm(false);
     setEditingId(null);
@@ -33,7 +34,7 @@ const TraderList: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (confirm('¿Estás seguro de eliminar este trader? Esta acción no se puede deshacer.')) {
       await dbService.deleteTrader(id);
-      const updated = await dbService.getTraders();
+      const updated = dbService.getTraders();
       setTraders(updated);
     }
   };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -11,39 +10,20 @@ import { Trade, AppUser } from './types';
 import { dbService } from './services/dbService';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<AppUser | null>(dbService.getCurrentUser());
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
 
-  useEffect(() => {
-    // Immediate check of local storage for session
-    const checkSession = () => {
-      const stored = localStorage.getItem('academy_auth_user');
-      if (stored) {
-        try {
-          const parsedUser = JSON.parse(stored);
-          setUser(parsedUser);
-        } catch (error) {
-          console.error("Failed to parse local session", error);
-          localStorage.removeItem('academy_auth_user');
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkSession();
-  }, []);
-
   const handleLogin = (newUser: AppUser) => {
+    localStorage.setItem('current_user', JSON.stringify(newUser));
+    dbService.initializeDefaultData(newUser.id);
     setUser(newUser);
-    localStorage.setItem('academy_auth_user', JSON.stringify(newUser));
     setCurrentView('dashboard');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('current_user');
     setUser(null);
-    localStorage.removeItem('academy_auth_user');
     setCurrentView('dashboard');
   };
 
@@ -56,16 +36,6 @@ const App: React.FC = () => {
     setEditingTrade(undefined);
     setCurrentView('operaciones');
   };
-
-  // Immediate rendering of Login if no user is present
-  if (isLoading && !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Cargando...</p>
-      </div>
-    );
-  }
 
   if (!user) {
     return (
