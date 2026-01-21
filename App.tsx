@@ -13,7 +13,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
 
-  // Sync initial state with localStorage
   useEffect(() => {
     dbService.initializeDefaultData();
     const currentUser = dbService.getCurrentUser();
@@ -54,7 +53,7 @@ export default function App() {
       user={user}
       onLogout={handleLogout}
     >
-      {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
+      {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} onEdit={handleEditTrade} />}
       
       {currentView === 'operaciones' && (
         <TradeList onEdit={handleEditTrade} />
@@ -65,11 +64,11 @@ export default function App() {
           editTrade={editTrade}
           onSuccess={() => {
             setEditTrade(undefined);
-            setCurrentView('operaciones');
+            setCurrentView('dashboard');
           }}
           onCancel={() => {
             setEditTrade(undefined);
-            setCurrentView('operaciones');
+            setCurrentView('dashboard');
           }}
         />
       )}

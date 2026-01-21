@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, UserPlus, ShieldCheck, TrendingUp, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { LogIn, TrendingUp, ShieldCheck } from 'lucide-react';
 import { AppUser } from '../types';
 
 interface LoginProps {
@@ -7,46 +7,20 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [isRegister, setIsRegister] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [academyName, setAcademyName] = useState('');
-  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    
-    if (!email || !password) {
-      setError('Por favor completa todos los campos.');
-      return;
+    if (email && password) {
+      const user: AppUser = {
+        id: crypto.randomUUID(),
+        nombre_academia: 'Trading Academy Academy',
+        email: email,
+        created_at: new Date().toISOString()
+      };
+      onLogin(user);
     }
-
-    setLoading(true);
-
-    // Minimal delay for UX feedback, but strictly local
-    setTimeout(() => {
-      try {
-        if (isRegister && !academyName.trim()) {
-          throw new Error("El nombre de la academia es obligatorio");
-        }
-
-        const user: AppUser = {
-          id: crypto.randomUUID(),
-          nombre_academia: isRegister ? academyName : 'Mi Academia Local',
-          email: email,
-          created_at: new Date().toISOString()
-        };
-        
-        onLogin(user);
-      } catch (err: any) {
-        setError(err.message || 'Error al procesar la solicitud.');
-      } finally {
-        setLoading(false);
-      }
-    }, 400);
   };
 
   return (
@@ -64,35 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl">
-          <div className="flex bg-slate-800/50 p-1 rounded-2xl mb-8">
-            <button 
-              onClick={() => { setIsRegister(false); setError(''); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${!isRegister ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Entrar
-            </button>
-            <button 
-              onClick={() => { setIsRegister(true); setError(''); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${isRegister ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Registrar
-            </button>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-5">
-            {isRegister && (
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre Academia</label>
-                <input 
-                  required
-                  className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                  placeholder="Alpha Trading Academy"
-                  value={academyName}
-                  onChange={e => setAcademyName(e.target.value)}
-                />
-              </div>
-            )}
-
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Email</label>
               <input 
@@ -107,44 +53,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
-              <div className="relative">
-                <input 
-                  required
-                  type={showPassword ? "text" : "password"}
-                  className="w-full bg-slate-800/50 border border-slate-700 p-4 pr-12 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-400"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+              <input 
+                required
+                type="password"
+                className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
             </div>
-
-            {error && (
-              <p className="text-rose-400 text-xs font-bold bg-rose-400/10 p-3 rounded-xl border border-rose-400/20 text-center">
-                {error}
-              </p>
-            )}
 
             <button 
               type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4 disabled:opacity-70"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
             >
-              {loading ? <Loader2 size={20} className="animate-spin" /> : (isRegister ? <UserPlus size={20} /> : <LogIn size={20} />)}
-              {loading ? 'Accediendo...' : (isRegister ? 'Crear Perfil Academy' : 'Entrar Ahora')}
+              <LogIn size={20} />
+              Entrar Ahora
             </button>
           </form>
         </div>
 
         <p className="text-center text-slate-500 text-[10px] mt-8 uppercase tracking-[0.2em]">
-          <ShieldCheck size={12} className="inline mr-1 mb-0.5" /> 100% Privacidad en Almacenamiento Local
+          <ShieldCheck size={12} className="inline mr-1 mb-0.5" /> 100% Privacidad Local
         </p>
       </div>
     </div>
