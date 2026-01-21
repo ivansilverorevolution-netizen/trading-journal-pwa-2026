@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -27,38 +26,37 @@ const App: React.FC = () => {
     setUser(appUser);
     localStorage.setItem('academy_auth_user', JSON.stringify(appUser));
     
-    // Background sync - non-blocking
+    // Background synchronization
     if (dbService.isCloudEnabled()) {
-      dbService.syncFromCloud().catch(e => {
-        console.warn("Background sync failed, using local cache.", e);
+      dbService.syncFromCloud().catch((error) => {
+        console.warn("Background sync failed, using local cache.", error);
       });
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
-      // Solo activamos carga si no hay un usuario ya en el estado para evitar bloqueos
-      if (!user) {
-        setIsLoading(true);
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            startSession(session.user);
-          } else {
-            setUser(null);
-          }
-        } catch (e) {
-          console.error("Auth init error:", e);
+      // Start loading only for initial check
+      setIsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          startSession(session.user);
+        } else {
           setUser(null);
-        } finally {
-          setIsLoading(false);
         }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        setUser(null);
+      } finally {
+        // Requirement 5: Always set isLoading to false
+        setIsLoading(false);
       }
     };
 
     initAuth();
 
-    // Listen for auth state changes
+    // Monitor auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         startSession(session.user);
@@ -93,7 +91,7 @@ const App: React.FC = () => {
     setCurrentView('operaciones');
   };
 
-  // Solo mostrar pantalla de carga si estamos verificando y no tenemos usuario
+  // Requirement 4: Loading screen only during active verification
   if (isLoading && !user) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
@@ -103,7 +101,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Si no hay sesión, Login inmediatamente
+  // Requirement 1: If no session, show Login
   if (!user) {
     return (
       <>
@@ -137,7 +135,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Si hay sesión activa, Dashboard
+  // Requirement 2: If session active, show main Layout (Dashboard by default)
   return (
     <Layout 
       currentView={currentView} 
