@@ -11,7 +11,7 @@ export interface AppUser {
 
 export interface Trader {
   id: string;
-  user_id: string; // Relación con el dueño de la cuenta
+  user_id: string;
   nombre: string;
   correo_electronico: string;
   rol: TraderRole;
@@ -28,12 +28,12 @@ export type ResultStatusType = 'Ganadora' | 'Perdedora' | 'BE' | 'Parcial';
 
 export interface Trade {
   id: string;
-  user_id: string; // Relación con el dueño de la cuenta
+  user_id: string;
   trader_id: string;
   fecha_entrada: string;
   hora_entrada: string;
-  horario_entrada: string; // Nuevo campo para visualización
-  dia_semana: string;      // Nuevo campo automático
+  horario_entrada: string;
+  dia_semana: string;
   fecha_cierre?: string;
   hora_cierre?: string;
   sesion: SessionType;
@@ -58,7 +58,5 @@ export interface Trade {
   nota_trader?: string;
   created_at: string;
   updated_at: string;
-  
-  // Joined property
   trader_name?: string;
 }

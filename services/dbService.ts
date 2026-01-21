@@ -17,7 +17,6 @@ export const dbService = {
     }
   },
 
-  // Operaciones de Trades - Mapeo exacto a tu SQL
   fetchTrades: async (): Promise<Trade[]> => {
     const { data, error } = await supabase
       .from('trades')
@@ -49,11 +48,9 @@ export const dbService = {
     })) as unknown as Trade[];
   },
 
-  getTrades: (): Trade[] => [],
-
   saveTrade: async (trade: Partial<Trade>) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Sesión expirada o no válida");
+    if (!user) throw new Error("Sesión expirada");
 
     const tradeData = {
       id: trade.id || crypto.randomUUID(),
@@ -80,21 +77,13 @@ export const dbService = {
   },
 
   deleteTrade: async (id: string) => {
-    const { error } = await supabase
-      .from('trades')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('trades').delete().eq('id', id);
     if (error) throw error;
   },
 
   fetchTraders: async (): Promise<Trader[]> => {
-    const { data, error } = await supabase
-      .from('traders')
-      .select('*')
-      .order('nombre');
-
+    const { data, error } = await supabase.from('traders').select('*').order('nombre');
     if (error) throw error;
-
     return (data || []).map(t => ({
       id: t.id.toString(),
       user_id: t.user_id,
@@ -106,8 +95,6 @@ export const dbService = {
       updated_at: t.updated_at
     })) as Trader[];
   },
-
-  getTraders: (): Trader[] => [],
 
   saveTrader: async (trader: Partial<Trader>) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -123,26 +110,17 @@ export const dbService = {
 
     let error;
     if (trader.id) {
-      const { error: e } = await supabase
-        .from('traders')
-        .update(traderData)
-        .eq('id', parseInt(trader.id));
+      const { error: e } = await supabase.from('traders').update(traderData).eq('id', parseInt(trader.id));
       error = e;
     } else {
-      const { error: e } = await supabase
-        .from('traders')
-        .insert([traderData]);
+      const { error: e } = await supabase.from('traders').insert([traderData]);
       error = e;
     }
-
     if (error) throw error;
   },
 
   deleteTrader: async (id: string) => {
-    const { error } = await supabase
-      .from('traders')
-      .delete()
-      .eq('id', parseInt(id));
+    const { error } = await supabase.from('traders').delete().eq('id', parseInt(id));
     if (error) throw error;
   }
 };
