@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { dbService } from '../services/dbService';
 import { Trade } from '../types';
-import AiAnalysis from './AiAnalysis';
 import TradeList from './TradeList';
 import { 
   TrendingUp, 
@@ -9,7 +8,8 @@ import {
   Hash, 
   Target, 
   Zap,
-  PlusCircle
+  PlusCircle,
+  RefreshCw
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -19,10 +19,18 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onEdit }) => {
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setTrades(dbService.getTrades());
   }, []);
+
+  const handleRefresh = async () => {
+    setSyncing(true);
+    const updatedTrades = await dbService.fetchTrades();
+    setTrades(updatedTrades);
+    setSyncing(false);
+  };
 
   const stats = useMemo(() => {
     const total = trades.length;
@@ -55,19 +63,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onEdit }) => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard General</h2>
-          <p className="text-slate-500 mt-2 font-medium">Visualiza tu rendimiento y gestiona tus operaciones.</p>
+          <p className="text-slate-500 mt-2 font-medium">Rendimiento sincronizado con la nube.</p>
         </div>
         
-        <button 
-          onClick={() => onNavigate?.('registrar')}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
-        >
-          <PlusCircle size={20} />
-          NUEVA OPERACIÓN
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={handleRefresh}
+            className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-500 hover:text-blue-600 transition-all hover:border-blue-200 active:scale-95"
+            disabled={syncing}
+          >
+            <RefreshCw size={20} className={syncing ? 'animate-spin' : ''} />
+          </button>
+          <button 
+            onClick={() => onNavigate?.('registrar')}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+          >
+            <PlusCircle size={20} />
+            NUEVA OPERACIÓN
+          </button>
+        </div>
       </div>
-
-      <AiAnalysis stats={stats} />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
         {[

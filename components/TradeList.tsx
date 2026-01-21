@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { dbService } from '../services/dbService';
 import { Trade } from '../types';
-import { Edit3, Search, TrendingUp, TrendingDown, Trash2 } from 'lucide-react';
+import { Edit3, Search, TrendingUp, TrendingDown, Trash2, Loader2 } from 'lucide-react';
 
 interface TradeListProps {
   onEdit: (trade: Trade) => void;
@@ -10,15 +10,18 @@ interface TradeListProps {
 const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setTrades(dbService.getTrades());
   }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('¿Eliminar esta operación definitivamente?')) {
-      dbService.deleteTrade(id);
+      setLoading(true);
+      await dbService.deleteTrade(id);
       setTrades(dbService.getTrades());
+      setLoading(false);
     }
   };
 
@@ -50,7 +53,6 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
               <tr>
                 <th className="px-6 py-4">Fecha</th>
                 <th className="px-6 py-4">Activo</th>
-                <th className="px-6 py-4">Miembro</th>
                 <th className="px-6 py-4">Ratio R</th>
                 <th className="px-6 py-4">Resultado</th>
                 <th className="px-6 py-4 text-right">Acciones</th>
@@ -66,7 +68,6 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
                       <span className="font-black text-slate-900">{trade.activo}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-700">{trade.trader_name}</td>
                   <td className={`px-6 py-4 font-black ${trade.resultado_r && trade.resultado_r > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {trade.resultado_r?.toFixed(2)} R
                   </td>
@@ -81,12 +82,21 @@ const TradeList: React.FC<TradeListProps> = ({ onEdit }) => {
                     <button onClick={() => onEdit(trade)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
                       <Edit3 size={18} />
                     </button>
-                    <button onClick={() => handleDelete(trade.id)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
-                      <Trash2 size={18} />
+                    <button 
+                      onClick={() => handleDelete(trade.id)} 
+                      disabled={loading}
+                      className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredTrades.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No hay operaciones registradas.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

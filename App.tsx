@@ -6,29 +6,50 @@ import TradeForm from './components/TradeForm';
 import TraderList from './components/TraderList';
 import Login from './components/Login';
 import { dbService } from './services/dbService';
+import { supabase } from './services/supabaseClient';
 import { AppUser, Trade } from './types';
 
 export default function App() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    dbService.initializeDefaultData();
-    const currentUser = dbService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        dbService.setCurrentUser(session.user);
+        setUser(dbService.getCurrentUser());
+        refreshData();
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        dbService.setCurrentUser(session.user);
+        setUser(dbService.getCurrentUser());
+        refreshData();
+      } else {
+        dbService.setCurrentUser(null);
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = (loggedUser: AppUser) => {
-    setUser(loggedUser);
-    dbService.setCurrentUser(loggedUser);
+  const refreshData = async () => {
+    await dbService.fetchTrades();
+    await dbService.fetchTraders();
   };
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     dbService.setCurrentUser(null);
+    setUser(null);
     setCurrentView('dashboard');
   };
 
@@ -42,8 +63,16 @@ export default function App() {
     setCurrentView('registrar');
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return <Login />;
   }
 
   return (

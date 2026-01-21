@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/dbService';
-import { Trade, Trader, SessionType, DirectionType, ResultStatusType } from '../types';
+import { Trade, Trader, SessionType, DirectionType } from '../types';
 import { 
   SESSIONS, 
   DIRECTIONS, 
   STATUSES 
 } from '../constants';
-import { Save, ChevronLeft, Trash2, Info, Target, Clock, TrendingUp, TrendingDown, ClipboardCheck } from 'lucide-react';
+import { Save, ChevronLeft, Trash2, Info, Target, Clock, ClipboardCheck, Loader2 } from 'lucide-react';
 
 interface TradeFormProps {
   editTrade?: Trade;
@@ -16,6 +16,7 @@ interface TradeFormProps {
 
 const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel }) => {
   const [traders, setTraders] = useState<Trader[]>([]);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Trade>>({
     fecha_entrada: new Date().toISOString().split('T')[0],
     hora_entrada: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
@@ -46,32 +47,39 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.activo || formData.precio_entrada === undefined) {
       alert('Por favor completa los campos obligatorios.');
       return;
     }
     
-    const dataToSave = {
-      ...formData,
-      trader_id: formData.trader_id || (traders.length > 0 ? traders[0].id : 'default')
-    };
+    setLoading(true);
+    try {
+      const dataToSave = {
+        ...formData,
+        trader_id: formData.trader_id || (traders.length > 0 ? traders[0].id : undefined)
+      };
 
-    dbService.saveTrade(dataToSave);
-    onSuccess();
+      await dbService.saveTrade(dataToSave);
+      onSuccess();
+    } catch (err: any) {
+      alert('Error al guardar: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (editTrade && confirm('¿Eliminar esta operación definitivamente?')) {
-      dbService.deleteTrade(editTrade.id);
+      setLoading(true);
+      await dbService.deleteTrade(editTrade.id);
       onSuccess();
     }
   };
 
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden max-w-2xl mx-auto mb-10 animate-in fade-in zoom-in-95 duration-300">
-      {/* Header */}
       <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button onClick={onCancel} className="text-white bg-white/10 p-2 rounded-xl hover:bg-white/20 transition-colors" type="button">
@@ -84,16 +92,16 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
         {editTrade && (
           <button 
             onClick={handleDelete}
+            disabled={loading}
             className="text-rose-400 hover:text-rose-300 p-2 hover:bg-rose-500/10 rounded-xl transition-all"
             type="button"
           >
-            <Trash2 size={20} />
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
           </button>
         )}
       </div>
 
       <form onSubmit={handleSubmit} className="p-8 space-y-8">
-        {/* Section: General Data */}
         <section className="space-y-4">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <Info size={14} /> Datos Generales
@@ -103,7 +111,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
               <label className="text-xs font-bold text-slate-600 ml-1">Activo / Par *</label>
               <input 
                 name="activo" 
-                placeholder="Ej: EURUSD, BTC, Gold" 
+                placeholder="Ej: EURUSD, BTC" 
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                 value={formData.activo || ''}
                 onChange={handleChange}
@@ -114,7 +122,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
               <label className="text-xs font-bold text-slate-600 ml-1">Estrategia</label>
               <input 
                 name="estrategia" 
-                placeholder="Ej: Liquidez, Orderblock..." 
+                placeholder="Ej: Liquidez..." 
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                 value={formData.estrategia || ''}
                 onChange={handleChange}
@@ -123,7 +131,6 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
           </div>
         </section>
 
-        {/* Section: Execution Info */}
         <section className="space-y-4 pt-6 border-t border-slate-100">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <Clock size={14} /> Ejecución y Sesión
@@ -164,7 +171,6 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
           </div>
         </section>
 
-        {/* Section: Pricing */}
         <section className="space-y-4 pt-6 border-t border-slate-100">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <Target size={14} /> Niveles de Precio
@@ -207,10 +213,9 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
           </div>
         </section>
 
-        {/* Section: Result */}
         <section className="space-y-4 pt-6 border-t border-slate-100">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <ClipboardCheck size={14} /> Resultado de la Operación
+            <ClipboardCheck size={14} /> Resultado
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -221,12 +226,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
                 value={formData.resultado_estado || ''}
                 onChange={handleChange}
               >
-                <option value="">Pendiente / Abierta</option>
+                <option value="">Abierta</option>
                 {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 ml-1">Ratio R Obtenido</label>
+              <label className="text-xs font-bold text-slate-600 ml-1">Ratio R</label>
               <input 
                 type="number"
                 step="0.01"
@@ -237,33 +242,24 @@ const TradeForm: React.FC<TradeFormProps> = ({ editTrade, onSuccess, onCancel })
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 ml-1">Notas y Psicología</label>
-            <textarea 
-              name="nota_trader"
-              rows={3}
-              placeholder="Describe tus emociones, errores cometidos o gestión..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/50 transition-all resize-none"
-              value={formData.nota_trader || ''}
-              onChange={handleChange}
-            />
-          </div>
         </section>
 
         <div className="pt-6 flex gap-3">
           <button 
             type="button" 
             onClick={onCancel}
+            disabled={loading}
             className="flex-1 px-6 py-4 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors"
           >
             CANCELAR
           </button>
           <button 
             type="submit"
-            className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all flex items-center justify-center gap-3 active:scale-95"
+            disabled={loading}
+            className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all flex items-center justify-center gap-3 active:scale-95"
           >
-            <Save size={20} />
-            GUARDAR REGISTRO
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+            GUARDAR
           </button>
         </div>
       </form>
