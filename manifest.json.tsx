@@ -1,4 +1,5 @@
-{
+// Fix: Export as default object to avoid parsing as an empty block with unused labels
+export default {
   "name": "Trading Journal Academy Pro",
   "short_name": "TJ Academy",
   "description": "Aplicación de Trading Journal para Trading Sin Fronteras",
@@ -21,4 +22,4 @@
       "purpose": "any maskable"
     }
   ]
-}
+};

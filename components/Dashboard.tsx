@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { dbService } from '../services/dbService';
 import { Trade, Trader } from '../types';
+import AiAnalysis from './AiAnalysis';
 import { 
   TrendingUp, 
   Percent, 
@@ -72,7 +73,7 @@ const Dashboard: React.FC = () => {
     const total = filteredTrades.length;
     if (total === 0) return { 
       total: 0, winrate: 0, totalR: 0, avgR: 0, expectancy: 0, maxDD: 0, 
-      weeklyR: 0, monthlyR: 0, dailyR: 0, consistencyRatio: 0 
+      weeklyR: 0, monthlyR: 0, dailyR: 0, consistencyRatio: 0, equityData: [] 
     };
 
     const winners = filteredTrades.filter(t => t.resultado_estado === 'Ganadora');
@@ -83,7 +84,7 @@ const Dashboard: React.FC = () => {
     const avgR = totalR / total;
 
     const avgWin = winners.length > 0 ? winners.reduce((acc, t) => acc + (t.resultado_r || 0), 0) / winners.length : 0;
-    const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((acc, t) => acc + (t.resultado_r || 0), 0) / losers.length) : 0;
+    const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((acc, t) => acc + (t.resultado_r || 0), 0) / losers.length) : 1;
     const expectancy = ((winrate / 100) * avgWin) - ((1 - winrate / 100) * avgLoss);
 
     let peak = 0;
@@ -141,36 +142,36 @@ const Dashboard: React.FC = () => {
   }, [traders, filteredTrades]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Panel de Control</h2>
-          <p className="text-slate-500 mt-1 font-medium">Análisis de rendimiento y rentabilidad de la academia.</p>
+          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Panel de Control</h2>
+          <p className="text-slate-500 mt-2 font-medium">Análisis de rendimiento y rentabilidad de la academia.</p>
         </div>
         
-        <div className="flex flex-wrap gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex flex-wrap gap-3 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Filtrar Fecha</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Periodo</label>
             <div className="flex items-center gap-2">
               <input 
                 type="date" 
-                className="text-xs p-2 bg-slate-50 rounded-lg outline-none border border-slate-100" 
+                className="text-xs p-2.5 bg-slate-50 rounded-xl outline-none border border-slate-100" 
                 value={filters.startDate}
                 onChange={e => setFilters({...filters, startDate: e.target.value})}
               />
               <span className="text-slate-300">-</span>
               <input 
                 type="date" 
-                className="text-xs p-2 bg-slate-50 rounded-lg outline-none border border-slate-100" 
+                className="text-xs p-2.5 bg-slate-50 rounded-xl outline-none border border-slate-100" 
                 value={filters.endDate}
                 onChange={e => setFilters({...filters, endDate: e.target.value})}
               />
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Elegir Miembro</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Equipo</label>
             <select 
-              className="text-xs p-2 bg-slate-50 rounded-lg outline-none min-w-[140px] border border-slate-100"
+              className="text-xs p-2.5 bg-slate-50 rounded-xl outline-none min-w-[160px] border border-slate-100"
               value={filters.trader}
               onChange={e => setFilters({...filters, trader: e.target.value})}
             >
@@ -180,7 +181,7 @@ const Dashboard: React.FC = () => {
           </div>
           <button 
             onClick={() => setFilters({startDate: '', endDate: '', trader: '', strategy: ''})}
-            className="self-end p-2 text-slate-400 hover:text-slate-600 transition-colors"
+            className="self-end p-2.5 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-xl border border-slate-100"
             title="Limpiar filtros"
           >
             <Filter size={18} />
@@ -188,37 +189,39 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <AiAnalysis stats={stats} />
+
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-5">
         {[
-          { label: 'Total Operaciones', value: stats.total, icon: <Hash size={20}/>, color: 'text-slate-700', bg: 'bg-slate-50' },
-          { label: 'Acierto (WR)', value: `${stats.winrate.toFixed(1)}%`, icon: <Percent size={20}/>, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Ratio R/B Total', value: `${stats.totalR.toFixed(2)} R`, icon: <TrendingUp size={20}/>, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Expectativa (R)', value: `${stats.expectancy.toFixed(2)}`, icon: <Target size={20}/>, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Racha Negativa', value: `-${stats.maxDD.toFixed(2)} R`, icon: <ArrowDownCircle size={20}/>, color: 'text-rose-600', bg: 'bg-rose-50' },
-          { label: 'Nivel Disciplina', value: `${stats.consistencyRatio.toFixed(0)}%`, icon: <Zap size={20}/>, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Operaciones', value: stats.total, icon: <Hash size={20}/>, color: 'text-slate-700', bg: 'bg-slate-100' },
+          { label: 'Winrate', value: `${stats.winrate.toFixed(1)}%`, icon: <Percent size={20}/>, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'R Total', value: `${stats.totalR.toFixed(2)} R`, icon: <TrendingUp size={20}/>, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Expectativa', value: `${stats.expectancy.toFixed(2)}`, icon: <Target size={20}/>, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Max Drawdown', value: `-${stats.maxDD.toFixed(2)} R`, icon: <ArrowDownCircle size={20}/>, color: 'text-rose-600', bg: 'bg-rose-50' },
+          { label: 'Consistencia', value: `${stats.consistencyRatio.toFixed(0)}%`, icon: <Zap size={20}/>, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((kpi, i) => (
-          <div key={i} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className={`${kpi.bg} ${kpi.color} w-10 h-10 rounded-2xl flex items-center justify-center mb-4`}>
+          <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+            <div className={`${kpi.bg} ${kpi.color} w-12 h-12 rounded-2xl flex items-center justify-center mb-5 shadow-inner`}>
               {kpi.icon}
             </div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{kpi.label}</p>
-            <p className={`text-2xl font-black mt-1 ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em]">{kpi.label}</p>
+            <p className={`text-2xl font-black mt-2 leading-none ${kpi.color}`}>{kpi.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <TrendingUp size={18} className="text-blue-500" />
-              Evolución del Ratio R/B
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-10">
+            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
+              <div className="bg-blue-600 w-2 h-2 rounded-full animate-pulse"></div>
+              Crecimiento de la Cuenta (R)
             </h3>
             <div className="flex gap-4">
               <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Hoy (R)</p>
-                <p className={`text-sm font-bold ${stats.dailyR >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {stats.dailyR >= 0 ? '+' : ''}{stats.dailyR.toFixed(2)} R
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado Actual</p>
+                <p className={`text-base font-black ${stats.totalR >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {stats.totalR >= 0 ? '+' : ''}{stats.totalR.toFixed(2)} R
                 </p>
               </div>
             </div>
@@ -228,144 +231,152 @@ const Dashboard: React.FC = () => {
               <AreaChart data={stats.equityData}>
                 <defs>
                   <linearGradient id="colorR" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="trade" hide />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis fontSize={11} fontWeight="bold" tickLine={false} axisLine={false} tick={{fill: '#94a3b8'}} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px' }}
+                  itemStyle={{ fontWeight: 'black', fontSize: '14px' }}
                   labelStyle={{ display: 'none' }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="r" 
-                  name="Ratio R"
+                  name="Beneficio Acumulado"
                   stroke="#3b82f6" 
-                  strokeWidth={3}
+                  strokeWidth={4}
                   fillOpacity={1} 
                   fill="url(#colorR)" 
-                  animationDuration={1500}
+                  animationDuration={2000}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-slate-900 p-6 rounded-3xl text-white shadow-xl shadow-slate-200">
-            <h3 className="font-bold flex items-center gap-2 mb-6">
-              <BarChart3 size={18} className="text-blue-400" />
-              Ratio R/B por Tiempo
+        <div className="space-y-8">
+          <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-slate-300 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+            <h3 className="font-black flex items-center gap-3 mb-8 text-lg relative z-10">
+              <BarChart3 size={20} className="text-blue-400" />
+              Metas de Rendimiento
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-6 relative z-10">
               {[
-                { label: 'Este Mes', value: stats.monthlyR, target: 10 },
-                { label: 'Esta Semana', value: stats.weeklyR, target: 2.5 },
-                { label: 'Día de Hoy', value: stats.dailyR, target: 0.5 },
+                { label: 'Meta Mensual', value: stats.monthlyR, target: 10 },
+                { label: 'Meta Semanal', value: stats.weeklyR, target: 2.5 },
+                { label: 'Cierre Diario', value: stats.dailyR, target: 0.5 },
               ].map((period, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div key={i} className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <span>{period.label}</span>
                     <span className={period.value >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
                       {period.value >= 0 ? '+' : ''}{period.value.toFixed(2)} R
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                     <div 
-                      className={`h-full transition-all duration-1000 ${period.value >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                      className={`h-full transition-all duration-1000 ease-out shadow-lg ${period.value >= 0 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gradient-to-r from-rose-600 to-rose-400'}`}
                       style={{ width: `${Math.min(100, (Math.abs(period.value) / period.target) * 100)}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-8 pt-6 border-t border-slate-800">
+            <div className="mt-10 pt-8 border-t border-slate-800/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-blue-500/20 p-2 rounded-xl">
-                  <Zap size={16} className="text-blue-400" />
+                <div className="bg-blue-500/10 p-2.5 rounded-2xl">
+                  <Zap size={18} className="text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase">Ratio R Promedio/Op.</p>
-                  <p className="text-lg font-bold">{stats.expectancy.toFixed(3)} R</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Expectancia Actual</p>
+                  <p className="text-xl font-black">{stats.expectancy.toFixed(3)} R</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-             <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-              <Scale size={18} className="text-indigo-500" />
-              Efectividad Real
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+             <h3 className="font-black text-slate-800 flex items-center gap-3 mb-6 text-lg">
+              <Scale size={20} className="text-indigo-500" />
+              Ratio de Victorias
             </h3>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-2">
                <div className="text-center flex-1">
-                 <p className="text-2xl font-black text-emerald-600">{filteredTrades.filter(t => t.resultado_estado === 'Ganadora').length}</p>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Ganadas</p>
+                 <p className="text-3xl font-black text-emerald-600 leading-none">{filteredTrades.filter(t => t.resultado_estado === 'Ganadora').length}</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Win</p>
                </div>
                <div className="w-px h-10 bg-slate-100" />
                <div className="text-center flex-1">
-                 <p className="text-2xl font-black text-rose-600">{filteredTrades.filter(t => t.resultado_estado === 'Perdedora').length}</p>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Perdidas</p>
+                 <p className="text-3xl font-black text-rose-600 leading-none">{filteredTrades.filter(t => t.resultado_estado === 'Perdedora').length}</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Loss</p>
                </div>
                <div className="w-px h-10 bg-slate-100" />
                <div className="text-center flex-1">
-                 <p className="text-2xl font-black text-slate-400">{filteredTrades.filter(t => t.resultado_estado === 'BE' || t.resultado_estado === 'Parcial').length}</p>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Neutras</p>
+                 <p className="text-3xl font-black text-slate-300 leading-none">{filteredTrades.filter(t => t.resultado_estado === 'BE' || t.resultado_estado === 'Parcial').length}</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Neutral</p>
                </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <User size={18} className="text-slate-400" />
-            Clasificación por Ratio R/B Acumulado
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
+            <User size={20} className="text-slate-400" />
+            Ranking por Rentabilidad (Ratio R)
           </h3>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">Equipo Alpha</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <thead className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">Nombre Miembro</th>
-                <th className="px-6 py-4">Total Op.</th>
-                <th className="px-6 py-4">% Acierto</th>
-                <th className="px-6 py-4">Ratio R/B Total</th>
-                <th className="px-6 py-4">Ratio Promedio</th>
-                <th className="px-6 py-4">Nivel Disciplina</th>
+                <th className="px-8 py-5">Nombre Miembro</th>
+                <th className="px-8 py-5">Ops</th>
+                <th className="px-8 py-5">Winrate</th>
+                <th className="px-8 py-5">R Acumulado</th>
+                <th className="px-8 py-5">Promedio/Op</th>
+                <th className="px-8 py-5 text-center">Consistencia</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {traderRanking.map((tr) => (
-                <tr key={tr.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4 font-bold text-slate-700">{tr.nombre}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-slate-500">{tr.total}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${tr.wr >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {tr.wr.toFixed(1)}%
-                      </span>
+                <tr key={tr.id} className="hover:bg-slate-50/50 transition-all group cursor-default">
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        {tr.nombre.charAt(0)}
+                      </div>
+                      <span className="font-bold text-slate-700">{tr.nombre}</span>
                     </div>
                   </td>
-                  <td className={`px-6 py-4 font-black ${tr.r >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+                  <td className="px-8 py-5 text-sm font-bold text-slate-500">{tr.total}</td>
+                  <td className="px-8 py-5">
+                    <span className={`text-sm font-black ${tr.wr >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {tr.wr.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className={`px-8 py-5 font-black text-base ${tr.r >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
                     {tr.r >= 0 ? '+' : ''}{tr.r.toFixed(2)} R
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                  <td className="px-8 py-5 text-sm text-slate-600 font-bold">
                     {tr.avg.toFixed(2)} R/op
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-1.5 bg-slate-100 rounded-full max-w-[60px]">
+                  <td className="px-8 py-5">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                         <div 
-                          className={`h-full rounded-full ${tr.consistency >= 60 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                          className={`h-full rounded-full transition-all duration-1000 ${tr.consistency >= 60 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
                           style={{ width: `${tr.consistency}%` }}
                         />
                       </div>
-                      <span className="text-xs font-bold text-slate-400">{tr.consistency.toFixed(0)}%</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase">{tr.consistency.toFixed(0)}%</span>
                     </div>
                   </td>
                 </tr>
@@ -373,7 +384,12 @@ const Dashboard: React.FC = () => {
             </tbody>
           </table>
           {traderRanking.length === 0 && (
-            <div className="p-10 text-center text-slate-400 italic">No hay datos de miembros registrados aún.</div>
+            <div className="p-20 text-center flex flex-col items-center justify-center space-y-3">
+              <div className="bg-slate-50 p-4 rounded-full text-slate-300">
+                <User size={40} />
+              </div>
+              <p className="text-slate-400 font-bold italic">No hay datos de miembros registrados aún.</p>
+            </div>
           )}
         </div>
       </div>

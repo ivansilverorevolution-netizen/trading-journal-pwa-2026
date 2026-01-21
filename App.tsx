@@ -6,6 +6,7 @@ import TradeForm from './components/TradeForm';
 import TradeList from './components/TradeList';
 import TraderList from './components/TraderList';
 import Login from './components/Login';
+import InstallBanner from './components/InstallBanner';
 import { Trade, AppUser } from './types';
 import { supabase, dbService } from './services/dbService';
 
@@ -16,13 +17,23 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
 
-  const syncData = async () => {
+  const startSession = async (sessionUser: any) => {
+    const appUser: AppUser = {
+      id: sessionUser.id,
+      nombre_academia: sessionUser.user_metadata?.nombre_academia || 'Mi Academia',
+      email: sessionUser.email || '',
+      created_at: sessionUser.created_at || new Date().toISOString()
+    };
+    setUser(appUser);
+    localStorage.setItem('academy_auth_user', JSON.stringify(appUser));
+    
+    // Sincronización automática de datos en la nube
     if (dbService.isCloudEnabled()) {
       setIsSyncing(true);
       try {
         await dbService.syncFromCloud();
       } catch (e) {
-        console.warn("Fallo en sincronización inicial, continuando con datos locales.");
+        console.warn("Fallo sincronización, usando caché local.");
       } finally {
         setIsSyncing(false);
       }
@@ -30,41 +41,35 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const initAuth = async () => {
       try {
-        // 1. Verificar sesión activa de Supabase
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (session?.user) {
-          const currentUser: AppUser = {
-            id: session.user.id,
-            nombre_academia: session.user.user_metadata?.nombre_academia || 'Mi Academia',
-            email: session.user.email || '',
-            created_at: session.user.created_at || new Date().toISOString()
-          };
-          localStorage.setItem('academy_auth_user', JSON.stringify(currentUser));
-          setUser(currentUser);
-          await syncData();
+          await startSession(session.user);
         } else {
-          // 2. Fallback local para rapidez
+          // Fallback local por si se perdió la conexión pero hay datos previos
           const stored = localStorage.getItem('academy_auth_user');
           if (stored) {
-            setUser(JSON.parse(stored));
+             // Verificamos si realmente hay una sesión activa, si no limpiamos
+             setUser(null);
           }
         }
       } catch (e) {
-        console.error("Error en el arranque de la app:", e);
+        console.error("Auth init error:", e);
       } finally {
         setIsLoading(false);
       }
     };
-    checkAuth();
 
-    // Listener de auth para detectar cierres de sesión externos
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('academy_auth_user');
+    initAuth();
+
+    // Suscripción a cambios de estado de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await startSession(session.user);
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        localStorage.removeItem('academy_auth_user');
       }
     });
 
@@ -73,17 +78,13 @@ const App: React.FC = () => {
 
   const handleLogin = async (newUser: AppUser) => {
     setUser(newUser);
-    localStorage.setItem('academy_auth_user', JSON.stringify(newUser));
-    await syncData();
     setCurrentView('dashboard');
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {}
-    localStorage.removeItem('academy_auth_user');
+    await supabase.auth.signOut();
     setUser(null);
+    localStorage.removeItem('academy_auth_user');
     setCurrentView('dashboard');
   };
 
@@ -100,7 +101,7 @@ const App: React.FC = () => {
   if (isLoading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
       <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Iniciando Sistema...</p>
+      <p className="text-blue-500 font-black tracking-widest uppercase text-xs">Cargando Perfil...</p>
     </div>
   );
 
@@ -111,14 +112,19 @@ const App: React.FC = () => {
          <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
       <div className="text-center space-y-2">
-        <p className="text-white font-black tracking-[0.3em] uppercase text-sm">Sincronizando Nube</p>
-        <p className="text-slate-500 text-[10px] font-bold uppercase">Esto solo tomará unos segundos...</p>
+        <p className="text-white font-black tracking-[0.3em] uppercase text-sm">Actualizando Bitácora</p>
+        <p className="text-slate-500 text-[10px] font-bold uppercase">Sincronizando con la nube...</p>
       </div>
     </div>
   );
 
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <>
+        <Login onLogin={handleLogin} />
+        <InstallBanner />
+      </>
+    );
   }
 
   const renderView = () => {
@@ -153,6 +159,7 @@ const App: React.FC = () => {
       onLogout={handleLogout}
     >
       {renderView()}
+      <InstallBanner />
     </Layout>
   );
 };

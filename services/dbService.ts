@@ -2,14 +2,13 @@
 import { Trader, Trade, AppUser } from '../types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// --- CONFIGURACIÓN DE SUPABASE (PROPORCIONADA POR EL USUARIO) ---
+// --- CONFIGURACIÓN DE SUPABASE ---
 const SUPABASE_URL = 'https://zrpfulkklnjnkrvuiwbo.supabase.co'; 
 const SUPABASE_KEY = 'sb_publishable_ElIgYT9fhZ-8oMFB-O1Pow_hycvPm9m';
 
 const TRADERS_KEY = 'academy_traders_v3';
 const TRADES_KEY = 'academy_trades_v3';
 
-// Inicialización segura del cliente
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export const dbService = {
@@ -17,24 +16,17 @@ export const dbService = {
     return !!SUPABASE_URL && !!SUPABASE_KEY && SUPABASE_KEY.startsWith('sb_');
   },
 
-  getCurrentUserId(): string {
-    const userStr = localStorage.getItem('academy_auth_user');
-    if (!userStr) return 'anonymous';
-    try {
-      return JSON.parse(userStr).id;
-    } catch {
-      return 'anonymous';
-    }
+  async getCurrentUserId(): Promise<string | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user ? user.id : null;
   },
 
-  // Sincronización robusta: Intenta bajar datos pero no bloquea si falla
   async syncFromCloud(): Promise<void> {
     if (!this.isCloudEnabled()) return;
-    const userId = this.getCurrentUserId();
-    if (userId === 'anonymous') return;
+    const userId = await this.getCurrentUserId();
+    if (!userId) return;
     
     try {
-      // Nota: Si las tablas no existen en Supabase, esto devolverá error 404
       const [tradersRes, tradesRes] = await Promise.all([
         supabase.from('traders').select('*').eq('user_id', userId),
         supabase.from('trades').select('*').eq('user_id', userId)
@@ -47,34 +39,30 @@ export const dbService = {
         localStorage.setItem(TRADES_KEY, JSON.stringify(tradesRes.data));
       }
     } catch (e) {
-      console.error("Error de sincronización con la nube. Usando datos locales.", e);
+      console.error("Error de sincronización con la nube:", e);
     }
   },
 
   async initializeMockData(userId: string) {
     try {
-      const existingTraders = await this.getTraders();
-      if (existingTraders.length === 0) {
-        const names = ['ADMIN ACADEMIA', 'ANALISTA SENIOR'];
-        for (const name of names) {
-          await this.saveTrader({
-            nombre: name,
-            rol: name.includes('ADMIN') ? 'analista_senior' : 'mentor',
-            activo: true
-          });
-        }
+      const traders = await this.getTraders();
+      if (traders.length === 0) {
+        await this.saveTrader({
+          nombre: 'ADMIN ACADEMIA',
+          rol: 'analista_senior',
+          activo: true
+        });
       }
     } catch (e) {
       console.error("Error inicializando datos:", e);
     }
   },
 
-  // Gestión de Miembros
   async getTraders(): Promise<Trader[]> {
-    const userId = this.getCurrentUserId();
+    const userId = await this.getCurrentUserId();
+    if (!userId) return [];
     
-    // Intentar obtener de nube primero
-    if (this.isCloudEnabled() && userId !== 'anonymous') {
+    if (this.isCloudEnabled()) {
       try {
         const { data, error } = await supabase.from('traders').select('*').eq('user_id', userId);
         if (!error && data) {
@@ -84,14 +72,15 @@ export const dbService = {
       } catch (e) {}
     }
 
-    // Fallback local
     const data = localStorage.getItem(TRADERS_KEY);
     const allTraders: Trader[] = data ? JSON.parse(data) : [];
     return allTraders.filter(t => t.user_id === userId);
   },
 
   async saveTrader(trader: Partial<Trader>): Promise<Trader> {
-    const userId = this.getCurrentUserId();
+    const userId = await this.getCurrentUserId();
+    if (!userId) throw new Error("No autenticado");
+
     const newTrader: Trader = {
       id: trader.id || crypto.randomUUID(),
       user_id: userId,
@@ -103,7 +92,6 @@ export const dbService = {
       updated_at: new Date().toISOString(),
     };
 
-    // 1. Guardar localmente siempre (inmediato)
     const allData = localStorage.getItem(TRADERS_KEY);
     const traders: Trader[] = allData ? JSON.parse(allData) : [];
     const index = traders.findIndex(t => t.id === newTrader.id);
@@ -111,40 +99,33 @@ export const dbService = {
     else traders.push(newTrader);
     localStorage.setItem(TRADERS_KEY, JSON.stringify(traders));
 
-    // 2. Intentar guardar en nube de fondo
-    if (this.isCloudEnabled() && userId !== 'anonymous') {
-      try {
-        await supabase.from('traders').upsert(newTrader);
-      } catch (e) {
-        console.warn("No se pudo persistir en la nube, guardado localmente.");
-      }
+    if (this.isCloudEnabled()) {
+      await supabase.from('traders').upsert(newTrader);
     }
 
     return newTrader;
   },
 
   async deleteTrader(id: string): Promise<void> {
-    const userId = this.getCurrentUserId();
+    const userId = await this.getCurrentUserId();
+    if (!userId) return;
     
-    // Local
     const data = localStorage.getItem(TRADERS_KEY);
     const traders: Trader[] = data ? JSON.parse(data) : [];
     localStorage.setItem(TRADERS_KEY, JSON.stringify(traders.filter(t => t.id !== id)));
 
-    // Nube
-    if (this.isCloudEnabled() && userId !== 'anonymous') {
-      try {
-        await supabase.from('traders').delete().eq('id', id);
-      } catch (e) {}
+    if (this.isCloudEnabled()) {
+      await supabase.from('traders').delete().eq('id', id);
     }
   },
 
-  // Gestión de Operaciones
   async getTrades(): Promise<Trade[]> {
-    const userId = this.getCurrentUserId();
+    const userId = await this.getCurrentUserId();
+    if (!userId) return [];
+    
     const traders = await this.getTraders();
     
-    if (this.isCloudEnabled() && userId !== 'anonymous') {
+    if (this.isCloudEnabled()) {
       try {
         const { data, error } = await supabase.from('trades').select('*').eq('user_id', userId);
         if (!error && data) {
@@ -168,7 +149,9 @@ export const dbService = {
   },
 
   async saveTrade(trade: Partial<Trade>): Promise<Trade> {
-    const userId = this.getCurrentUserId();
+    const userId = await this.getCurrentUserId();
+    if (!userId) throw new Error("No autenticado");
+
     const newTrade: Trade = {
       ...trade as Trade,
       id: trade.id || crypto.randomUUID(),
@@ -177,35 +160,30 @@ export const dbService = {
       updated_at: new Date().toISOString(),
     };
 
-    // Local
     const allData = localStorage.getItem(TRADES_KEY);
     const trades: Trade[] = allData ? JSON.parse(allData) : [];
-    const index = trades.findIndex(t => t.id === newTrade.id);
+    const index = trades.findIndex(t => t.id === newTrade.id); // Corregido: trades en lugar de traders
     if (index > -1) trades[index] = newTrade;
     else trades.push(newTrade);
     localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
 
-    // Nube
-    if (this.isCloudEnabled() && userId !== 'anonymous') {
-      try {
-        await supabase.from('trades').upsert(newTrade);
-      } catch (e) {}
+    if (this.isCloudEnabled()) {
+      await supabase.from('trades').upsert(newTrade);
     }
 
     return newTrade;
   },
 
   async deleteTrade(id: string): Promise<void> {
-    const userId = this.getCurrentUserId();
+    const userId = await this.getCurrentUserId();
+    if (!userId) return;
     
     const data = localStorage.getItem(TRADES_KEY);
     const trades: Trade[] = data ? JSON.parse(data) : [];
     localStorage.setItem(TRADES_KEY, JSON.stringify(trades.filter(t => t.id !== id)));
 
-    if (this.isCloudEnabled() && userId !== 'anonymous') {
-      try {
-        await supabase.from('trades').delete().eq('id', id);
-      } catch (e) {}
+    if (this.isCloudEnabled()) {
+      await supabase.from('trades').delete().eq('id', id);
     }
   }
 };

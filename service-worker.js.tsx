@@ -7,7 +7,8 @@ const urlsToCache = [
 ];
 
 // Instalación del Service Worker
-self.addEventListener('install', (event) => {
+// Fix: Use 'any' type for event to access waitUntil
+self.addEventListener('install', (event: any) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -18,7 +19,8 @@ self.addEventListener('install', (event) => {
 });
 
 // Activación del Service Worker
-self.addEventListener('activate', (event) => {
+// Fix: Use 'any' type for event to access waitUntil
+self.addEventListener('activate', (event: any) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -33,7 +35,8 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch - estrategia Network First, fallback a Cache
-self.addEventListener('fetch', (event) => {
+// Fix: Use 'any' type for event to access respondWith and request
+self.addEventListener('fetch', (event: any) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
