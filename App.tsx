@@ -13,6 +13,14 @@ import { supabase, dbService } from './services/dbService';
 const App: React.FC = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Safety timeout to show login if loading takes too long
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, []);
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
