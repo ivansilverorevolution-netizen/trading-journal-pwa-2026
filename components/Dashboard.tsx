@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { dbService } from '../services/dbService';
 import { Trade } from '../types';
 import TradeList from './TradeList';
+import AiAnalysis from './AiAnalysis';
 import { 
   TrendingUp, 
   Percent, 
@@ -113,6 +114,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onEdit }) => {
           </div>
         ))}
       </div>
+
+      {/* IA Analysis Section */}
+      <AiAnalysis stats={stats} />
 
       <div className="space-y-6">
         <h3 className="text-xl font-black text-slate-800">Operaciones Recientes</h3>
