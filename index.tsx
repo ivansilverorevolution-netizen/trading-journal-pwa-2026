@@ -1,16 +1,4 @@
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// Archivo de entrada neutralizado para versión minimalista estable.
+// Todo el código de la aplicación reside en index.html para máxima fiabilidad.
+console.log('Bitácora Academy - Modo de Recuperación Activo');

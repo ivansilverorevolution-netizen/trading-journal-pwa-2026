@@ -1,130 +1,120 @@
-import { Trader, Trade, AppUser } from '../types';
+
+import { Trade, Trader, AppUser } from '../types';
 
 const STORAGE_KEYS = {
-  TRADERS: 'academy_traders_local',
-  TRADES: 'academy_trades_local',
-  USER: 'current_user'
+  TRADES: 'academy_trades',
+  TRADERS: 'academy_traders',
+  USER: 'academy_user'
 };
 
+// Servicio de persistencia local utilizando localStorage
 export const dbService = {
-  isCloudEnabled(): boolean {
-    return false;
+  isCloudEnabled: () => false,
+  
+  // Obtiene el usuario actual de la sesión local
+  getCurrentUser: (): AppUser | null => {
+    const user = localStorage.getItem(STORAGE_KEYS.USER);
+    return user ? JSON.parse(user) : null;
   },
 
-  getCurrentUser(): AppUser | null {
-    const data = localStorage.getItem(STORAGE_KEYS.USER);
-    if (!data) return null;
-    try {
-      return JSON.parse(data);
-    } catch (error) {
-      console.error("User parse error", error);
-      return null;
-    }
-  },
-
-  getTraders(): Trader[] {
-    const user = this.getCurrentUser();
-    if (!user) return [];
-    const data = localStorage.getItem(STORAGE_KEYS.TRADERS);
-    const traders: Trader[] = data ? JSON.parse(data) : [];
-    return traders.filter((t: Trader) => t.user_id === user.id);
-  },
-
-  saveTrader(traderData: Partial<Trader>): Trader {
-    const user = this.getCurrentUser();
-    const userId = user?.id || 'default-user';
-    
-    const newTrader: Trader = {
-      id: traderData.id || crypto.randomUUID(),
-      user_id: userId,
-      nombre: traderData.nombre || 'New Member',
-      correo_electronico: traderData.correo_electronico || '',
-      rol: traderData.rol || 'alumno',
-      activo: traderData.activo ?? true,
-      created_at: traderData.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const allTradersData = localStorage.getItem(STORAGE_KEYS.TRADERS);
-    let allTraders: Trader[] = allTradersData ? JSON.parse(allTradersData) : [];
-    
-    const index = allTraders.findIndex((t: Trader) => t.id === newTrader.id);
-    if (index > -1) {
-      allTraders[index] = newTrader;
+  // Guarda o elimina el usuario de la sesión actual
+  setCurrentUser: (user: AppUser | null) => {
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
     } else {
-      allTraders.push(newTrader);
+      localStorage.removeItem(STORAGE_KEYS.USER);
     }
-
-    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(allTraders));
-    return newTrader;
   },
 
-  deleteTrader(id: string): void {
-    const allTradersData = localStorage.getItem(STORAGE_KEYS.TRADERS);
-    if (!allTradersData) return;
-    const allTraders: Trader[] = JSON.parse(allTradersData);
-    const filtered = allTraders.filter((t: Trader) => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(filtered));
-  },
-
-  getTrades(): Trade[] {
-    const user = this.getCurrentUser();
-    if (!user) return [];
-    const traders = this.getTraders();
-    const data = localStorage.getItem(STORAGE_KEYS.TRADES);
-    const trades: Trade[] = data ? JSON.parse(data) : [];
+  // Recupera todas las operaciones registradas
+  getTrades: (): Trade[] => {
+    const trades = localStorage.getItem(STORAGE_KEYS.TRADES);
+    const parsedTrades: Trade[] = trades ? JSON.parse(trades) : [];
+    const traders = dbService.getTraders();
     
-    return trades
-      .filter((t: Trade) => t.user_id === user.id)
-      .map((trade: Trade) => ({
+    // Enriquecer cada operación con el nombre del trader correspondiente
+    return parsedTrades.map(t => ({
+      ...t,
+      trader_name: traders.find(tr => tr.id === t.trader_id)?.nombre || 'Desconocido'
+    }));
+  },
+
+  // Crea una nueva operación o actualiza una existente
+  saveTrade: (trade: Partial<Trade>) => {
+    const trades = dbService.getTrades();
+    if (trade.id) {
+      const index = trades.findIndex(t => t.id === trade.id);
+      if (index !== -1) {
+        trades[index] = { ...trades[index], ...trade, updated_at: new Date().toISOString() } as Trade;
+      }
+    } else {
+      const newTrade = {
         ...trade,
-        trader_name: traders.find((tr: Trader) => tr.id === trade.trader_id)?.nombre || 'Unknown'
-      }));
-  },
-
-  saveTrade(tradeData: Partial<Trade>): Trade {
-    const user = this.getCurrentUser();
-    const userId = user?.id || 'default-user';
-
-    const newTrade: Trade = {
-      ...tradeData as Trade,
-      id: tradeData.id || crypto.randomUUID(),
-      user_id: userId,
-      created_at: tradeData.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const allTradesData = localStorage.getItem(STORAGE_KEYS.TRADES);
-    let allTrades: Trade[] = allTradesData ? JSON.parse(allTradesData) : [];
-    
-    const index = allTrades.findIndex((t: Trade) => t.id === newTrade.id);
-    if (index > -1) {
-      allTrades[index] = newTrade;
-    } else {
-      allTrades.push(newTrade);
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as Trade;
+      trades.push(newTrade);
     }
-
-    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(allTrades));
-    return newTrade;
+    localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(trades));
   },
 
-  deleteTrade(id: string): void {
-    const allTradesData = localStorage.getItem(STORAGE_KEYS.TRADES);
-    if (!allTradesData) return;
-    const allTrades: Trade[] = JSON.parse(allTradesData);
-    const filtered = allTrades.filter((t: Trade) => t.id !== id);
+  // Elimina una operación por su ID
+  deleteTrade: (id: string) => {
+    const trades = dbService.getTrades();
+    const filtered = trades.filter(t => t.id !== id);
     localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(filtered));
   },
 
-  initializeDefaultData(userId: string): void {
-    const traders = this.getTraders();
-    if (traders.length === 0) {
-      this.saveTrader({
-        nombre: 'ADMIN ACADEMIA',
-        rol: 'analista_senior',
-        activo: true,
-        user_id: userId
-      });
+  // Recupera la lista de todos los miembros del equipo
+  getTraders: (): Trader[] => {
+    const traders = localStorage.getItem(STORAGE_KEYS.TRADERS);
+    return traders ? JSON.parse(traders) : [];
+  },
+
+  // Registra un nuevo miembro o edita uno existente
+  saveTrader: (trader: Partial<Trader>) => {
+    const traders = dbService.getTraders();
+    if (trader.id) {
+      const index = traders.findIndex(t => t.id === trader.id);
+      if (index !== -1) {
+        traders[index] = { ...traders[index], ...trader, updated_at: new Date().toISOString() } as Trader;
+      }
+    } else {
+      const newTrader = {
+        ...trader,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as Trader;
+      traders.push(newTrader);
+    }
+    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(traders));
+  },
+
+  // Elimina un miembro del equipo
+  deleteTrader: (id: string) => {
+    const traders = dbService.getTraders();
+    const filtered = traders.filter(t => t.id !== id);
+    localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(filtered));
+  },
+
+  // Inicializa datos de prueba si el almacenamiento está vacío
+  initializeDefaultData: () => {
+    if (!localStorage.getItem(STORAGE_KEYS.TRADERS)) {
+      const defaultTraders: Trader[] = [
+        {
+          id: crypto.randomUUID(),
+          user_id: 'default',
+          nombre: 'Mentor Principal',
+          correo_electronico: 'admin@academy.com',
+          rol: 'mentor',
+          activo: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.TRADERS, JSON.stringify(defaultTraders));
     }
   }
 };

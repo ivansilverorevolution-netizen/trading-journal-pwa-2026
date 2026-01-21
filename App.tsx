@@ -1,86 +1,83 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
-import TradeForm from './components/TradeForm';
 import TradeList from './components/TradeList';
+import TradeForm from './components/TradeForm';
 import TraderList from './components/TraderList';
 import Login from './components/Login';
 import InstallBanner from './components/InstallBanner';
-import { Trade, AppUser } from './types';
 import { dbService } from './services/dbService';
+import { AppUser, Trade } from './types';
 
-const App: React.FC = () => {
-  const [user, setUser] = useState<AppUser | null>(() => dbService.getCurrentUser());
-  const [currentView, setCurrentView] = useState<string>('dashboard');
-  const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
+// Componente raíz que orquestra la navegación y el estado de la sesión
+export default function App() {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
 
-  const handleLogin = (newUser: AppUser) => {
-    localStorage.setItem('current_user', JSON.stringify(newUser));
-    dbService.initializeDefaultData(newUser.id);
-    setUser(newUser);
-    setCurrentView('dashboard');
+  // Carga inicial de sesión y preparación de base de datos local
+  useEffect(() => {
+    dbService.initializeDefaultData();
+    const currentUser = dbService.getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+    }
+  }, []);
+
+  const handleLogin = (loggedUser: AppUser) => {
+    setUser(loggedUser);
+    dbService.setCurrentUser(loggedUser);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('current_user');
     setUser(null);
-    setCurrentView('dashboard');
+    dbService.setCurrentUser(null);
   };
 
-  const handleEditTrade = (trade: Trade) => {
-    setEditingTrade(trade);
-    setCurrentView('registrar');
-  };
-
-  const handleFormSuccess = () => {
-    setEditingTrade(undefined);
-    setCurrentView('operaciones');
-  };
-
+  // Redirigir a login si no hay sesión activa
   if (!user) {
-    return (
-      <>
-        <Login onLogin={handleLogin} />
-        <InstallBanner />
-      </>
-    );
+    return <Login onLogin={handleLogin} />;
   }
 
-  const renderContent = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'registrar':
-        return (
-          <TradeForm 
-            editTrade={editingTrade} 
-            onSuccess={handleFormSuccess}
-            onCancel={() => {
-              setEditingTrade(undefined);
-              setCurrentView('operaciones');
-            }} 
-          />
-        );
-      case 'operaciones':
-        return <TradeList onEdit={handleEditTrade} />;
-      case 'traders':
-        return <TraderList />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
+  // Renderizado dinámico basado en la navegación lateral
   return (
     <Layout 
       currentView={currentView} 
-      onNavigate={setCurrentView} 
-      user={user} 
+      onNavigate={(view) => {
+        setCurrentView(view);
+        setEditTrade(undefined);
+      }} 
+      user={user}
       onLogout={handleLogout}
     >
-      {renderContent()}
+      {currentView === 'dashboard' && <Dashboard />}
+      
+      {currentView === 'operaciones' && (
+        <TradeList onEdit={(trade) => {
+          setEditTrade(trade);
+          setCurrentView('registrar');
+        }} />
+      )}
+      
+      {currentView === 'registrar' && (
+        <TradeForm 
+          editTrade={editTrade}
+          onSuccess={() => {
+            setEditTrade(undefined);
+            setCurrentView('operaciones');
+          }}
+          onCancel={() => {
+            setEditTrade(undefined);
+            setCurrentView('operaciones');
+          }}
+        />
+      )}
+      
+      {currentView === 'traders' && <TraderList />}
+      
+      {/* Utilidad para facilitar la instalación de la aplicación como PWA */}
       <InstallBanner />
     </Layout>
   );
-};
-
-export default App;
+}
