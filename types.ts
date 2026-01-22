@@ -16,6 +16,11 @@ export interface Trader {
   correo_electronico: string;
   rol: TraderRole;
   activo: boolean;
+  capital_inicial: number;
+  capital_actual?: number; // Calculado dinámicamente
+  metodo_calculo: 'valor_r' | 'riesgo_porcentaje';
+  valor_r: number;
+  riesgo_porcentaje: number;
   created_at: string;
   updated_at: string;
 }
@@ -23,7 +28,7 @@ export interface Trader {
 export type SessionType = 'Londres' | 'Nueva York' | 'Asia' | 'Extra' | 'Nueva York PM';
 export type OperationType = 'senal_equipo' | 'operativa_propia' | 'alumno';
 export type InstrumentType = 'FX' | 'Indice' | 'Cripto' | 'Materia prima';
-export type DirectionType = 'Largo' | 'Corto';
+export type DirectionType = 'Compra' | 'Venta';
 export type ResultStatusType = 'Ganadora' | 'Perdedora' | 'BE' | 'Parcial';
 
 export interface Trade {
@@ -41,20 +46,19 @@ export interface Trade {
   activo: string;
   tipo_instrumento: InstrumentType;
   direccion: DirectionType;
+  
+  // Campos Financieros Nuevos
+  monto_riesgo: number; // USD arriesgados en este trade
   precio_entrada: number;
   stop_loss: number;
   take_profit_1: number;
-  take_profit_2?: number;
-  take_profit_3?: number;
+  
   resultado_estado?: ResultStatusType;
-  resultado_r?: number;
-  resultado_dinero?: number;
+  resultado_r?: number; // El multiplicador R (ej: 2.5)
+  resultado_dinero?: number; // Calculado: monto_riesgo * resultado_r
+  resultado_porcentaje?: number; // Calculado: (resultado_dinero / capital_inicial) * 100
+  
   estrategia: string;
-  timeframe_setup: string;
-  descripcion_analisis?: string;
-  link_grafico?: string;
-  gestion_trade?: string;
-  error_principal?: string;
   nota_trader?: string;
   created_at: string;
   updated_at: string;

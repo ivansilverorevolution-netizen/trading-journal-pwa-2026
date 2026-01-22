@@ -4,12 +4,7 @@ import {
   LayoutDashboard, 
   ClipboardList, 
   Users, 
-  PlusCircle,
-  TrendingUp,
-  BarChart3,
-  Calendar,
-  Layers,
-  Settings
+  PlusCircle
 } from 'lucide-react';
 
 export const ROLES = [
@@ -26,11 +21,9 @@ export const OP_TYPES = [
   { value: 'alumno', label: 'Alumno' },
 ];
 export const INSTRUMENTS = ['FX', 'Indice', 'Cripto', 'Materia prima'];
-export const DIRECTIONS = ['Largo', 'Corto'];
+export const DIRECTIONS = ['Compra', 'Venta'];
 export const STATUSES = ['Ganadora', 'Perdedora', 'BE', 'Parcial'];
 export const TIMEFRAMES = ['M1', 'M3', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
-export const ERROR_TYPES = ['FOMO', 'SL_mal_colocado', 'Entrada_tardia', 'Sin_error', 'Otro'];
-export const GESTION_TYPES = ['Plan_respetado', 'Salida_anticipada', 'Salida_tardia'];
 
 export const NAVIGATION = [
   { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: 'dashboard' },

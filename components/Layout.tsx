@@ -1,7 +1,6 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NAVIGATION } from '../constants';
-import { LogOut, User, Cloud, CloudOff, ShieldCheck } from 'lucide-react';
+import { LogOut, User, Cloud, CloudOff, ShieldCheck, BarChart3, Sun, Moon } from 'lucide-react';
 import { AppUser } from '../types';
 import { dbService } from '../services/dbService';
 
@@ -15,16 +14,37 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, user, onLogout, children }) => {
   const isCloud = dbService.isCloudEnabled();
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('tradecontrol_theme');
+    return saved === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('tradecontrol_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('tradecontrol_theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(!isDark);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       {/* Mobile Header */}
       <header className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center gap-2">
-           <ShieldCheck size={20} className="text-blue-500" />
-           <h1 className="text-xl font-bold tracking-tight truncate max-w-[150px]">{user.nombre_academia}</h1>
+           <BarChart3 size={20} className="text-blue-500" />
+           <h1 className="text-lg font-black tracking-tight uppercase truncate max-w-[150px]">TradeControl</h1>
         </div>
-        <button onClick={onLogout} className="text-slate-400"><LogOut size={20}/></button>
+        <div className="flex items-center gap-4">
+          <button onClick={toggleTheme} className="text-slate-400 p-1">
+            {isDark ? <Sun size={20}/> : <Moon size={20}/>}
+          </button>
+          <button onClick={onLogout} className="text-slate-400 p-1"><LogOut size={20}/></button>
+        </div>
       </header>
 
       {/* Sidebar - Desktop */}
@@ -32,11 +52,11 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, user, onLogout
         <div className="p-6">
           <div className="flex items-center gap-3 mb-2">
              <div className="bg-blue-600/10 p-2 rounded-xl">
-                <ShieldCheck size={24} className="text-blue-500" />
+                <BarChart3 size={24} className="text-blue-500" />
              </div>
-             <h1 className="text-xl font-black text-white tracking-tighter truncate leading-tight">{user.nombre_academia}</h1>
+             <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-tight">TradeControl</h1>
           </div>
-          <p className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Internal Performance Hub</p>
+          <p className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Control Profesional de Trading</p>
         </div>
         
         <div className="px-6 mb-4">
@@ -45,8 +65,8 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, user, onLogout
                 <User size={16} />
              </div>
              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-white truncate">{user.email}</p>
-                <p className="text-[10px] text-slate-500 font-bold uppercase">Pro Academy User</p>
+                <p className="text-xs font-bold text-white truncate">{user.nombre_academia}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">{user.email.split('@')[0]}</p>
              </div>
           </div>
         </div>
@@ -71,10 +91,17 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, user, onLogout
         </nav>
         
         <div className="p-6 border-t border-slate-800 bg-slate-900/50">
-          {/* Cloud Sync Status */}
+          <button 
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-3 text-slate-400 hover:text-blue-400 font-bold text-sm transition-colors py-3 mb-2 group"
+          >
+            {isDark ? <Sun size={18} className="group-hover:rotate-45 transition-transform" /> : <Moon size={18} className="group-hover:-rotate-12 transition-transform" />}
+            {isDark ? 'Modo Claro' : 'Modo Oscuro'}
+          </button>
+
           <div className={`flex items-center gap-3 mb-6 p-2 rounded-xl text-[10px] font-bold uppercase tracking-wider ${isCloud ? 'text-emerald-400 bg-emerald-500/5' : 'text-amber-400 bg-amber-500/5'}`}>
             {isCloud ? <Cloud size={14} /> : <CloudOff size={14} />}
-            {isCloud ? 'Sincronizado' : 'Modo Local'}
+            {isCloud ? 'Cloud Sync Activo' : 'Modo Offline'}
           </div>
 
           <button 
@@ -84,12 +111,12 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, user, onLogout
             <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
             Cerrar Sesión
           </button>
-          <p className="text-[9px] text-slate-700 font-bold mt-4 uppercase tracking-[0.1em] text-center italic">© 2025 ACADEMY SYNC PRO</p>
+          <p className="text-[9px] text-slate-700 font-bold mt-4 uppercase tracking-[0.1em] text-center italic">© 2025 TRADECONTROL PRO</p>
         </div>
       </aside>
 
       {/* Bottom Nav - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 px-2 shadow-2xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-16 z-50 px-2 shadow-2xl transition-colors duration-300">
         {NAVIGATION.map((item) => (
           <button
             key={item.path}
@@ -105,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, user, onLogout
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 pb-20 md:pb-0 overflow-auto bg-slate-50">
+      <main className="flex-1 pb-20 md:pb-0 overflow-auto">
         <div className="max-w-7xl mx-auto p-4 md:p-8">
           {children}
         </div>

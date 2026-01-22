@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-trading-journal-academy-pro",
+  "name": "tradecontrol",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +14,9 @@
     "recharts": "3.6.0",
     "lucide-react": "0.562.0",
     "@google/genai": "^1.38.0",
-    "@supabase/supabase-js": "^2.91.0"
+    "@supabase/supabase-js": "^2.91.0",
+    "jspdf": "2.5.1",
+    "jspdf-autotable": "3.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

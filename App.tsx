@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -16,8 +15,15 @@ export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [dashboardFilterId, setDashboardFilterId] = useState<string>('all');
 
   useEffect(() => {
+    // Aplicar tema guardado inmediatamente al iniciar la app para evitar destellos
+    const savedTheme = localStorage.getItem('tradecontrol_theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+
     // Escuchar cambios de sesión en Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -73,8 +79,11 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Cargando TradeControl...</p>
+        </div>
       </div>
     );
   }
@@ -84,7 +93,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <InstallBanner />
       <Layout 
         currentView={currentView} 
@@ -92,7 +101,14 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
       >
-        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} onEdit={handleEditTrade} />}
+        {currentView === 'dashboard' && (
+          <Dashboard 
+            onNavigate={handleNavigate} 
+            onEdit={handleEditTrade} 
+            defaultFilterId={dashboardFilterId}
+            onFilterChange={(id) => setDashboardFilterId(id)}
+          />
+        )}
         
         {currentView === 'operaciones' && (
           <TradeList onEdit={handleEditTrade} />
@@ -101,6 +117,7 @@ export default function App() {
         {currentView === 'registrar' && (
           <TradeForm 
             editTrade={editTrade}
+            defaultTraderId={dashboardFilterId !== 'all' ? dashboardFilterId : undefined}
             onSuccess={() => {
               setEditTrade(undefined);
               setCurrentView('dashboard');

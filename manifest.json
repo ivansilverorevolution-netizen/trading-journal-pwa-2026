@@ -1,7 +1,7 @@
 {
-  "name": "Trading Journal Academy Pro",
-  "short_name": "TJ Academy",
-  "description": "Aplicación de Trading Journal para Trading Sin Fronteras",
+  "name": "TradeControl",
+  "short_name": "TradeControl",
+  "description": "Registro, plan y control profesional del trading",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
