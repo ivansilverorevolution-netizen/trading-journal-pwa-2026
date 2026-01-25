@@ -4,7 +4,8 @@ import {
   LayoutDashboard, 
   ClipboardList, 
   Users, 
-  PlusCircle
+  PlusCircle,
+  Calculator
 } from 'lucide-react';
 
 export const ROLES = [
@@ -30,4 +31,5 @@ export const NAVIGATION = [
   { name: 'Registrar', icon: <PlusCircle size={20} />, path: 'registrar' },
   { name: 'Operaciones', icon: <ClipboardList size={20} />, path: 'operaciones' },
   { name: 'Traders', icon: <Users size={20} />, path: 'traders' },
+  { name: 'Proyecciones', icon: <Calculator size={20} />, path: 'proyecciones' },
 ];

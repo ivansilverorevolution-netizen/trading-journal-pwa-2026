@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import TradeList from './components/TradeList';
 import TradeForm from './components/TradeForm';
 import TraderList from './components/TraderList';
+import CompoundCalculator from './components/CompoundCalculator';
 import Login from './components/Login';
 import InstallBanner from './components/InstallBanner';
 import { dbService } from './services/dbService';
@@ -130,6 +132,8 @@ export default function App() {
         )}
         
         {currentView === 'traders' && <TraderList />}
+
+        {currentView === 'proyecciones' && <CompoundCalculator />}
       </Layout>
     </div>
   );
