@@ -23,7 +23,8 @@ export const OP_TYPES = [
 ];
 export const INSTRUMENTS = ['FX', 'Indice', 'Cripto', 'Materia prima'];
 export const DIRECTIONS = ['Compra', 'Venta'];
-export const STATUSES = ['Ganadora', 'Perdedora', 'BE', 'Parcial'];
+// Fixed: Added 'Pendiente' to STATUSES to match updated ResultStatusType.
+export const STATUSES = ['Ganadora', 'Perdedora', 'BE', 'Parcial', 'Pendiente'];
 export const TIMEFRAMES = ['M1', 'M3', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
 
 export const NAVIGATION = [

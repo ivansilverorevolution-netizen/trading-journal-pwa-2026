@@ -29,7 +29,8 @@ export type SessionType = 'Londres' | 'Nueva York' | 'Asia' | 'Extra' | 'Nueva Y
 export type OperationType = 'senal_equipo' | 'operativa_propia' | 'alumno';
 export type InstrumentType = 'FX' | 'Indice' | 'Cripto' | 'Materia prima';
 export type DirectionType = 'Compra' | 'Venta';
-export type ResultStatusType = 'Ganadora' | 'Perdedora' | 'BE' | 'Parcial';
+// Fixed: Added 'Pendiente' to ResultStatusType to fix assignment error in TradeForm and align with dbService usage.
+export type ResultStatusType = 'Ganadora' | 'Perdedora' | 'BE' | 'Parcial' | 'Pendiente';
 
 export interface Trade {
   id: string;
@@ -47,16 +48,10 @@ export interface Trade {
   tipo_instrumento: InstrumentType;
   direccion: DirectionType;
   
-  // Campos Financieros Nuevos
-  monto_riesgo: number; // USD arriesgados en este trade
-  precio_entrada: number;
-  stop_loss: number;
-  take_profit_1: number;
-  
+  // Campos Financieros Simplificados
+  monto_riesgo: number; // USD ganados/perdidos
   resultado_estado?: ResultStatusType;
   resultado_r?: number; // El multiplicador R (ej: 2.5)
-  resultado_dinero?: number; // Calculado: monto_riesgo * resultado_r
-  resultado_porcentaje?: number; // Calculado: (resultado_dinero / capital_inicial) * 100
   
   estrategia: string;
   nota_trader?: string;
